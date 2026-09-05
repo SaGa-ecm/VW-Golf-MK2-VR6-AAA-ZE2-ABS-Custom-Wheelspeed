@@ -1,0 +1,134 @@
+📋 STRATEGIE-ÜBERARBEITUNG VR6 XDF-EDITOR
+│
+├── 🔍 1. KERNALGORITHMEN (NEUENTWICKLUNG)
+│   │
+│   ├── 1.1 Springtabellen-Erkennung
+│   │   ├── 🔹 GESAMTEN BEREICH durchsuchen (0x8000–0xF000)
+│   │   ├── 🔹 CLUSTER-ANALYSE (Dichte gültiger 16‑Bit‑Adressen)
+│   │   ├── 🔹 SENTINEL-ERKENNUNG (0xFFFF als Endemarke)
+│   │   └── 🔹 INDIREKTE TABELLEN unterstützen (Adress-Arrays)
+│   │
+│   ├── 1.2 Dynamische Map‑Erkennung
+│   │   ├── 🔹 ALLE GRÖSSEN testen (4×4 … 20×20)
+│   │   ├── 🔹 QUALITÄTS-SCORE berechnen
+│   │   │   ├── Standardabweichung (5…50 = typisch)
+│   │   │   ├── Glätte (Gradient) → niedrige Differenz = Map
+│   │   │   └── Wertebereich (30…220 = plausibel)
+│   │   ├── 🔹 NICHT-QUADRATISCHE Maps erkennen (16×12, 12×16)
+│   │   └── 🔹 MASCHINELLES LERNEN (Random Forest) für Klassifikation
+│   │
+│   ├── 1.3 Intelligente Achsensuche
+│   │   ├── 🔹 BEREICH erweitern (0–256 Bytes vor der Map)
+│   │   ├── 🔹 8‑BIT‑ & 16‑BIT‑Achsen lesen
+│   │   ├── 🔹 MONOTONIE prüfen (aufsteigende Sequenz)
+│   │   ├── 🔹 NICHT‑LINEARE Achsen erkennen (logarithmisch)
+│   │   └── 🔹 FALLBACK: Index‑Werte + Markierung "unbekannt"
+│   │
+│   ├── 1.4 Vollständige Skalar‑Erkennung
+│   │   ├── 🔹 GESAMTEN BEREICH durchsuchen (0x8000–0xFFFF)
+│   │   ├── 🔹 TYPEN identifizieren:
+│   │   │   ├── Drehzahlbegrenzer (4000–8500)
+│   │   │   ├── Leerlaufdrehzahl (600–1500)
+│   │   │   ├── Lambda‑Sollwerte (0,7–1,0)
+│   │   │   ├── Temperaturschwellen (‑40…120°C)
+│   │   │   ├── Korrekturfaktoren (0–255)
+│   │   │   └── Adaptionswerte (Langzeit‑Lambda)
+│   │   ├── 🔹 FAKTOR & OFFSET automatisch erkennen
+│   │   └── 🔹 DATENBANK bekannter Adressen hinterlegen
+│   │
+│   ├── 1.5 Validierung & Plausibilität
+│   │   ├── 🔹 WERTEBEREICH prüfen (0–255 Rohdaten)
+│   │   ├── 🔹 PHYSIKALISCHE GRENZEN:
+│   │   │   ├── Zündwinkel: ‑10°…60°
+│   │   │   ├── Einspritzzeit: 0,5…30 ms
+│   │   │   └── Lambda: 0,7…1,2
+│   │   ├── 🔹 ACHSEN‑MONOTONIE erzwingen
+│   │   ├── 🔹 KORRELATION mit Map‑Werten prüfen
+│   │   └── 🔹 PLAUSIBILITÄTS‑SCORE → Filterung
+│   │
+│   └── 1.6 Checksummen‑Erkennung
+│       ├── 🔹 BEKANNTE ADRESSEN: 0xFFFE, 0xFFFD, 0xFFFC
+│       ├── 🔹 BIT‑SUCHE: einziger 16‑Bit‑Wert, der Gleichung erfüllt
+│       ├── 🔹 ALGORITHMUS: 16‑Bit‑Summe über 0x8000–0xFFFF
+│       └── 🔹 FALLBACK: 0xFFFE
+│
+├── 🎨 2. UI / UX – BENUTZERFREUNDLICHKEIT
+│   │
+│   ├── 2.1 Manuelle Korrektur
+│   │   ├── 🔹 KONTEXTMENÜ (Rechtsklick) für erkannte Strukturen
+│   │   ├── 🔹 DIALOG zur manuellen Eingabe:
+│   │   │   ├── Map‑Größe (Rows / Cols)
+│   │   │   ├── Startadresse
+│   │   │   ├── Achsen‑Adressen
+│   │   │   └── Umrechnungsfaktoren / Offsets
+│   │   ├── 🔹 LÖSCHEN falscher Erkennungen
+│   │   └── 🔹 JSON‑EXPORT / ‑IMPORT manueller Korrekturen
+│   │
+│   ├── 2.2 Datenvisualisierung
+│   │   ├── 🔹 3D‑PLOT für 3D‑Kennfelder
+│   │   ├── 🔹 HEATMAP für schnelle Auffälligkeitserkennung
+│   │   ├── 🔹 HISTOGRAMM der Werteverteilung
+│   │   └── 🔹 EXPORT als CSV / Excel für externe Analyse
+│   │
+│   └── 2.3 Fehlerbehandlung & Logging
+│       ├── 🔹 STRUKTURIERTES ERROR‑LOGGING (Kategorien)
+│       ├── 🔹 FEHLERLISTE mit Schweregrad (Error / Warning / Info)
+│       ├── 🔹 IGNORIEREN bestimmter Fehlertypen
+│       └── 🔹 EXPORT der Fehlerliste für Debugging
+│
+├── ⚡ 3. PERFORMANCE & OPTIMIERUNG
+│   │
+│   ├── 3.1 Web Workers
+│   │   └── 🔹 PARALLELE BERECHNUNG für aufwändige Algorithmen
+│   │
+│   ├── 3.2 Caching
+│   │   └── 🔹 ZWISCHENERGEBNISSE speichern (Springtabelle, Maps)
+│   │
+│   └── 3.3 Lazy Loading
+│       └── 🔹 XDF‑DEFINITIONEN NUR BEI BEDARF laden
+│
+├── 🧪 4. QUALITÄTSSICHERUNG
+│   │
+│   ├── 4.1 Unit‑Tests
+│   │   └── 🔹 ALLE ERKENNUNGSFUNKTIONEN testen
+│   │
+│   ├── 4.2 Golden‑Master‑Tests
+│   │   └── 🔹 MIT BEKANNTEN BINÄRDATEIEN verifizieren
+│   │
+│   └── 4.3 CI / CD
+│       └── 🔹 AUTOMATISIERTE PIPELINE für Tests & Build
+│
+├── 📚 5. DOKUMENTATION
+│   │
+│   ├── 5.1 Code‑Kommentare
+│   │   └── 🔹 ERKLÄRUNG der Heuristiken & Algorithmen
+│   │
+│   ├── 5.2 Benutzerhandbuch
+│   │   ├── 🔹 BEDIENUNG des Tools
+│   │   └── 🔹 BEISPIELE für manuelle Korrektur
+│   │
+│   └── 5.3 Entwickler‑Dokumentation
+│       └── 🔹 ARCHITEKTUR & ERWEITERUNGSPUNKTE
+│
+└── 📅 6. ROADMAP (ZEITPLAN)
+    │
+    ├── Phase 1 (Woche 1–2)
+    │   ├── ✅ Springtabellen‑Clustering
+    │   ├── ✅ Dynamische Map‑Erkennung
+    │   ├── ✅ Verbesserte Achsensuche
+    │   └── ✅ Basis‑Validierung
+    │
+    ├── Phase 2 (Woche 2–3)
+    │   ├── ✅ Vollständige Skalar‑Erkennung
+    │   ├── ✅ Checksummen‑Erkennung
+    │   └── ✅ Export / Import
+    │
+    ├── Phase 3 (Woche 3–4)
+    │   ├── ✅ Manuelle Korrektur
+    │   ├── ✅ Fehlerbehandlung & Logging
+    │   └── ✅ Visualisierung (3D‑Plots, Heatmaps)
+    │
+    └── Phase 4 (Woche 4–5)
+        ├── ✅ Performance‑Optimierung
+        ├── ✅ Testing mit verschiedenen Binärdateien
+        └── ✅ Dokumentation & Benutzerhandbuch

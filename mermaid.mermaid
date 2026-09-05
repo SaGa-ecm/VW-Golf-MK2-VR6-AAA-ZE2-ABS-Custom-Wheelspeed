@@ -1,0 +1,9 @@
+graph TD
+    A[Prototyp] --> B[Feedback]
+    B --> C[Überarbeitung]
+    C --> D[Test mit Binärdateien]
+    D --> E[Validierung]
+    E -->|Fehler| C
+    E -->|OK| F[Release]
+    F --> G[Benutzer-Feedback]
+    G --> C

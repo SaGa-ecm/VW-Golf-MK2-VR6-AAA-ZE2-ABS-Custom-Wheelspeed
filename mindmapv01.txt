@@ -1,0 +1,113 @@
+📋 STRATEGIE-ÜBERARBEITUNG VR6 XDF-EDITOR (STAND PHASE 1)
+│
+├── ✅ 1. KERNALGORITHMEN (PHASE 1 – ABGESCHLOSSEN)
+│   │
+│   ├── 1.1 Springtabellen-Erkennung ✅
+│   │   ├── 🔹 XDF-basierte Erkennung (Score-System)
+│   │   ├── 🔹 Automatische Identifikation der ECU/Software
+│   │   └── 🔹 Fallback auf erste XDF
+│   │
+│   ├── 1.2 Dynamische Map‑Erkennung ✅
+│   │   ├── 🔹 Unterstützung aller Map-Größen aus XDF
+│   │   ├── 🔹 Nicht-quadratische Maps (16×12, 12×16)
+│   │   ├── 🔹 Korrekte Extraktion von Achsen
+│   │   └── 🔹 QUALITÄTS-SCORE (Validierung)
+│   │
+│   ├── 1.3 Intelligente Achsensuche ✅
+│   │   ├── 🔹 BEREICH erweitert (0–256 Bytes)
+│   │   ├── 🔹 8‑Bit‑ & 16‑Bit‑Achsen lesen
+│   │   ├── 🔹 MONOTONIE prüfen (aufsteigend)
+│   │   └── 🔹 FALLBACK: Index‑Werte
+│   │
+│   ├── 1.4 Skalar-Erkennung ✅
+│   │   ├── 🔹 Alle Skalare aus XDF (Constants)
+│   │   ├── 🔹 8‑Bit‑ & 16‑Bit‑Unterscheidung
+│   │   └── 🔹 Einheiten-Mapping (metrisch)
+│   │
+│   ├── 1.5 Validierung & Plausibilität ✅
+│   │   ├── 🔹 WERTEBEREICH 0–255 prüfen
+│   │   ├── 🔹 PHYSIKALISCHE GRENZEN:
+│   │   │   ├── Zündwinkel: ‑10°…60°
+│   │   │   ├── Einspritzzeit: 0,5…30 ms
+│   │   │   └── Standardabweichung
+│   │   ├── 🔹 GLÄTTE (Gradient) prüfen
+│   │   └── 🔹 PLAUSIBILITÄTS‑SCORE + Statusicons
+│   │
+│   └── 1.6 Checksummen-Erkennung ✅
+│       ├── 🔹 Adresse aus XDF auslesen
+│       ├── 🔹 Fallback: 0xFFFE, 0xFFFD, 0xFFFC
+│       └── 🔹 16‑Bit‑Summe über 0x8000–0xFFFF
+│
+├── 🎨 2. UI / UX (PHASE 1 – ABGESCHLOSSEN)
+│   │
+│   ├── 2.1 Navigationsleiste ✅
+│   │   ├── 🔹 Status-Icons (✅ ⚠️ ❌)
+│   │   ├── 🔹 Badges (M / S / H)
+│   │   └── 🔹 Klick → Detailansicht
+│   │
+│   ├── 2.2 Detailansicht ✅
+│   │   ├── 🔹 Validierungszusammenfassung
+│   │   ├── 🔹 Editierbare Tabellenfelder
+│   │   ├── 🔹 Achseneingaben
+│   │   └── 🔹 Faktor/Offset/Einheit anzeigen
+│   │
+│   └── 2.3 Fehlerbehandlung ✅
+│       ├── 🔹 Strukturiertes Error-Logging
+│       ├── 🔹 Fehlermeldungen mit Kontext
+│       └── 🔹 Automatische Anzeige
+│
+├── ⏳ 3. PERFORMANCE & OPTIMIERUNG (TEILWEISE)
+│   │
+│   ├── 3.1 Optimierte Leseoperationen ✅
+│   │   └── 🔹 DataView-Nutzung
+│   │
+│   ├── 3.2 Caching ✅
+│   │   └── 🔹 XDF-Definitionen nur einmal parsen
+│   │
+│   └── 3.3 Web Workers ⏳
+│       └── 🔹 Geplant für Phase 4
+│
+├── 🧪 4. QUALITÄTSSICHERUNG (TEILWEISE)
+│   │
+│   ├── 4.1 Automatische Validierung ✅
+│   │   └── 🔹 Jede erkannte Struktur wird geprüft
+│   │
+│   ├── 4.2 Unit‑Tests ⏳
+│   │   └── 🔹 Geplant für Phase 4
+│   │
+│   └── 4.3 Golden‑Master‑Tests ⏳
+│       └── 🔹 Geplant für Phase 4
+│
+├── 📚 5. DOKUMENTATION (TEILWEISE)
+│   │
+│   ├── 5.1 Code‑Kommentare ✅
+│   │   └── 🔹 Erklärung der Heuristiken
+│   │
+│   ├── 5.2 Changelog ✅
+│   │   └── 🔹 Diese Datei
+│   │
+│   └── 5.3 Benutzerhandbuch ⏳
+│       └── 🔹 Geplant für Phase 4
+│
+└── 📅 6. ROADMAP (STAND)
+    │
+    ├── Phase 1 (Woche 1–2) ✅ ABGESCHLOSSEN
+    │   ├── ✅ Springtabellen-Clustering (XDF-basiert)
+    │   ├── ✅ Dynamische Map‑Erkennung (alle Größen)
+    │   ├── ✅ Verbesserte Achsensuche (8/16‑Bit)
+    │   └── ✅ Basis‑Validierung (Score, Status)
+    │
+    ├── Phase 2 (Woche 2–3) ⏳ IN PLANUNG
+    │   ├── 🔲 Vollständige Skalar‑Erkennung (erweitert)
+    │   ├── 🔲 Checksummen‑Erkennung (automatisch)
+    │   └── 🔲 Export / Import von Korrekturen
+    │
+    ├── Phase 3 (Woche 3–4) ⏳ IN PLANUNG
+    │   ├── 🔲 Manuelle Korrektur (Map-Größe, Adresse)
+    │   ├── 🔲 3D‑Visualisierung (Heatmaps, Plots)
+    │   └── 🔲 Export als CSV / Excel
+    │
+    └── Phase 4 (Woche 4–5) ⏳ IN PLANUNG
+        ├── 🔲 Performance‑Optimierung (Web Workers)
+        ├── 🔲 Testing mit verschiedenen Binärdateien
+        └── 🔲 Dokumentation & Benutzerhandbuch
