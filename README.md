@@ -28,3 +28,8 @@ Interaktive Pinout-Referenz für Golf 2 GTI (19E) mit AAA-VR6-Umbau (Motronic 2.
 ## Quellen
 
 a2resource.com · clubgti.com · phol-labs.com · wolfsburg-edition.info · motor-talk.de · vwcorrado.de · DStageGarage/ABS2SPEED · fiz-o-matic.net · Bentley/Workshop-Manuals · CHARM · Stand v3. Alle Angaben ohne Gewähr.
+
+## Wissensdatenbank (`db/`)
+
+- `vw-wissen2.db` — SQLite, Stand der Recherche (u.a. 25 Steuergeräte, 36 Pinouts, 17 Stecker, 22 Getriebe, 19 Teile, 66 Motoren)
+- `vw-wissen.sql` — frischer SQL-Dump derselben DB (diffbar, ohne Binärdatei nutzbar)
