@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signalpfad – VSS / GALA</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0D0D0D;color:#E8E8E8;font-family:system-ui,sans-serif;font-size:14px;line-height:1.5}
+a{color:#E8A020}.wrap{max-width:960px;margin:0 auto;padding:16px 14px 60px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+header h1{font-size:18px;margin:0;color:#E8A020}
+.back{font-size:12px;border:1px solid #333;padding:4px 10px;border-radius:3px;text-decoration:none;color:#bbb}
+.back:hover{border-color:#E8A020;color:#E8A020}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #222;margin-bottom:14px;overflow-x:auto}
+.tab-btn{background:none;border:none;cursor:pointer;padding:9px 14px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border-bottom:2px solid transparent;white-space:nowrap;color:#555}
+.tab-btn.active{color:#E8A020;border-bottom-color:#E8A020}
+.tab-btn:not(.active):hover{color:#999}
+.badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:3px;margin:2px 4px 2px 0}
+.warn-unbest{background:rgba(220,60,60,.15);color:#ff7b7b;border:1px solid rgba(220,60,60,.5)}
+.warn-annahme{background:rgba(232,160,32,.12);color:#E8A020;border:1px solid rgba(232,160,32,.5)}
+.src-toggle{display:flex;gap:8px;margin:12px 0}
+.src-btn{background:#161616;border:1px solid #2a2a2a;color:#999;font-size:13px;font-weight:600;padding:7px 16px;border-radius:3px;cursor:pointer}
+.src-btn.active{background:#E8A020;color:#0D0D0D;border-color:#E8A020}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:14px 0;padding:12px;background:#111;border:1px solid #222;border-radius:5px}
+.crumb{background:#1a1a1a;border:1px solid #2c2c2c;color:#ddd;font-family:ui-monospace,monospace;font-size:12px;font-weight:600;padding:6px 10px;border-radius:3px;cursor:pointer}
+.crumb:hover,.crumb.sel{border-color:#E8A020;color:#E8A020}
+.arrow{color:#444;font-size:12px}
+.card{background:#111;border:1px solid #222;border-radius:5px;padding:14px;margin:12px 0}
+.card h2{margin:0 0 8px;font-size:15px;color:#E8A020}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#555;text-align:left;padding:6px 8px;border-bottom:1px solid #222}
+td{padding:6px 8px;border-bottom:1px solid #1a1a1a;font-family:ui-monospace,monospace}
+.mono{font-family:ui-monospace,monospace}
+.mut{color:#888}.small{font-size:12px}
+input[type=text],input[type=number],input[type=search]{background:#141414;border:1px solid #2a2a2a;color:#E8E8E8;font-size:14px;padding:8px 10px;border-radius:3px;width:100%}
+input:focus{outline:none;border-color:rgba(232,160,32,.6)}
+label{display:block;font-size:12px;color:#999;margin:10px 0 4px}
+button.calc{background:#E8A020;color:#0D0D0D;border:none;font-weight:700;font-size:14px;padding:9px 18px;border-radius:3px;cursor:pointer;margin-top:12px}
+.result{background:#0f0f0f;border:1px solid #2a2a2a;border-radius:4px;padding:10px 12px;margin-top:12px;font-family:ui-monospace,monospace;font-size:14px}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:9px 4px;border-bottom:1px solid #1a1a1a;cursor:pointer}
+.chk input{margin-top:4px;accent-color:#E8A020}
+.chk.done span.txt{color:#555;text-decoration:line-through}
+.prog{height:8px;background:#1c1c1c;border-radius:4px;overflow:hidden;margin:8px 0}
+.prog>div{height:100%;background:#E8A020;width:0%}
+.searchrow{position:relative;margin-bottom:10px}
+.searchrow input{padding-left:32px}
+.searchrow .icon{position:absolute;left:10px;top:9px;color:#444}
+.kbd{font-family:ui-monospace,monospace;font-size:11px;background:#1c1c1c;border:1px solid #333;border-radius:3px;padding:1px 6px;color:#999}
+footer{margin-top:24px;color:#555;font-size:12px}
+@media(max-width:600px){.crumbs{gap:6px}.crumb{font-size:11px;padding:5px 8px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<a class="back" href="index.html">← Übersicht</a>
+<a class="back" href="steuergeraete.html">→ Steuergeräte</a>
+<h1>Signalpfad · VSS / GALA</h1>
+</header>
+<div>
+<span class="badge warn-unbest">UNBESTÄTIGT: Mk04/Mk20-Geberkompatibilität</span>
+<span class="badge warn-annahme">ANNAHME: k = 960 (per GPS verifizieren)</span>
+</div>
+
+<nav class="tabs" role="tablist">
+<button class="tab-btn active" data-tab="0">1 · Signalpfad</button>
+<button class="tab-btn" data-tab="1">2 · FAKTOR-Rechner</button>
+<button class="tab-btn" data-tab="2">3 · DZM-Tracer</button>
+<button class="tab-btn" data-tab="3">4 · MFA-Tracer</button>
+<button class="tab-btn" data-tab="4">5 · Arduino</button>
+<button class="tab-btn" data-tab="5">6 · Checkliste</button>
+</nav>
+
+<div class="searchrow"><span class="icon">/</span><input id="q" type="search" placeholder="Suche Station, Stecker, Farbe …  ( / = Fokus, Esc = zurück )"></div>
+
+<!-- TAB 0 SIGNALPFAD -->
+<section id="tab0">
+<div class="src-toggle">
+<button class="src-btn active" id="srcGala">GALA (Serie)</button>
+<button class="src-btn" id="srcArd">Arduino (Wandler)</button>
+</div>
+<div id="ardNote" class="card small" style="display:none">
+<b style="color:#E8A020">Arduino-Pfad:</b> <span class="mono">G47 Braun → SG Pin 5 · G47 Braun-Weiß → SG Pin 23 · LM393 → D2 (INT0) → D9 → PC817 → BC547 → Tacho T28/27</span>.
+Der Wandler ersetzt das GALA-Signal; ab T28/27 identische Kette.
+</div>
+<div class="crumbs" id="crumbs"></div>
+<div class="card" id="detail"><h2>Station wählen</h2><p class="mut small">Station in der Kette anklicken (Geber → G1/11 → U1/11 → T28/27 → Tacho → T28/07 → U2/02 → ECU 65 / Tempomat / Radio).</p></div>
+</section>
+
+<!-- TAB 1 FAKTOR -->
+<section id="tab1" style="display:none">
+<div class="card">
+<h2>FAKTOR-Rechner</h2>
+<p class="small mut">FAKTOR = (960 × 4) / (Zähne × 1000 / Reifenumfang). Hz@100 km/h = v / Umfang × Zähne × FAKTOR.</p>
+<label>Reifenumfang (m), z. B. 195/50R15 ≈ 1,83</label><input id="circ" type="number" step="0.001" value="1.83">
+<label>Zähnezahl ABS-Ring (VA)</label><input id="teeth" type="number" step="1" value="45">
+<label>k-Zahl Tacho (Annahme)</label><input id="kval" type="number" step="1" value="960">
+<button class="calc" id="calcBtn">Berechnen</button>
+<div class="result" id="calcOut">–</div>
+<p class="small mut">Referenz: 195/50R15 (1,83 m), 45 Zähne, k=960 → FAKTOR ≈ 0,156 · Hz@100 ≈ 107 Hz. Abweichende Reifen/Zähne → neu berechnen oder per GPS kalibrieren.</p>
+</div>
+</section>
+
+<!-- TAB 2 DZM -->
+<section id="tab2" style="display:none">
+<div class="card"><h2>DZM-Tracer (Kurzform)</h2>
+<table><tr><th>Von</th><th>Nach</th><th>Sollwert</th></tr>
+<tr><td>ECU Pin 22</td><td>→ G1/12</td><td>Drehzahlsignal</td></tr>
+<tr><td>G1/12</td><td>→ U1/06</td><td>intern ZE</td></tr>
+<tr><td>U1/06</td><td>→ T28/10</td><td>DZM-Eingang Tacho</td></tr></table>
+<p class="small mut">Hinweis: 6-Zylinder-ECU an 4-Zylinder-DZM → <b>6→4-Wandler nötig</b>, sonst falsche Anzeige.</p>
+</div>
+</section>
+
+<!-- TAB 3 MFA -->
+<section id="tab3" style="display:none">
+<div class="card"><h2>MFA-Tracer (Kurzform)</h2>
+<table><tr><th>Von</th><th>Nach</th><th>Sollwert</th></tr>
+<tr><td>ECU Pin 51</td><td>→ T28/26</td><td>Verbrauchssignal MFA</td></tr></table>
+<p class="small mut">Nur eine Station: direkt ECU → Tacho, kein ZE-Umweg.</p>
+</div>
+</section>
+
+<!-- TAB 4 ARDUINO -->
+<section id="tab4" style="display:none">
+<div class="card"><h2>Arduino-Wandler (Kurzform)</h2>
+<table><tr><th>Signal</th><th>Wert</th></tr>
+<tr><td>Eingang</td><td>G47 Braun → SG Pin 5 · Braun-Weiß → SG Pin 23</td></tr>
+<tr><td>Komparator</td><td>LM393 → D2 (INT0, RISING, Entprellung 500 µs)</td></tr>
+<tr><td>Ausgang</td><td>D9 → PC817 → BC547 Open-Collector → T28/27</td></tr>
+<tr><td>Formel</td><td>FAKTOR = (960×4) / (Zähne × 1000/Reifenumfang)</td></tr>
+<tr><td>Timeout</td><td>kein Puls &gt; 500 ms → Ausgang LOW</td></tr></table>
+</div>
+</section>
+
+<!-- TAB 5 CHECKLISTE -->
+<section id="tab5" style="display:none">
+<div class="card"><h2>Checkliste <span class="small mut" id="progTxt"></span></h2>
+<div class="prog"><div id="progBar"></div></div>
+<div id="checks"></div>
+<button class="calc" id="resetBtn" style="background:#222;color:#bbb">Fortschritt zurücksetzen</button>
+</div>
+</section>
+
+<footer><span class="kbd">1–6</span> Tabs · <span class="kbd">/</span> Suche · <span class="kbd">Esc</span> zurück zur Übersicht · Fortschritt lokal (localStorage) · <a href="index.html">index.html</a></footer>
+</div>
+
+<script>
+var ST=[
+{id:"geber",label:"Geber",rows:[["Bauteil","GALA-Geber 321907345B"],["Ausgang","Weiß-Gelb"],["Sollwert","Rechteck ~0–12 V, f ∝ v"]]},
+{id:"g111",label:"G1/11",rows:[["Stecker","G1"],["Pin","11"],["Farbe","Weiß-Gelb"],["Sollwert","Durchgang Geber → ZE"]]},
+{id:"u111",label:"U1/11",rows:[["Stecker","U1 (intern ZE)"],["Pin","11"],["Farbe","–"],["Sollwert","intern G1/11 → T28/27"]]},
+{id:"t2827",label:"T28/27",rows:[["Stecker","T28"],["Pin","27"],["Farbe","Blau-Weiß"],["Richtung","EINGANG Tacho"],["Sollwert","GALA-Rechteck am Tacho"]]},
+{id:"tacho",label:"Tacho",rows:[["Bauteil","Kombiinstrument"],["Eingang","T28/27 Blau-Weiß"],["Ausgang","T28/07 Violett"],["Sollwert","k = 960 (ANNAHME)"]]},
+{id:"t2807",label:"T28/07",rows:[["Stecker","T28"],["Pin","07"],["Farbe","Violett"],["Richtung","AUSGANG Tacho"],["Sollwert","aufbereitetes VSS-Signal"]]},
+{id:"u202",label:"U2/02",rows:[["Stecker","U2"],["Pin","02"],["Farbe","–"],["Sollwert","Verteiler → ECU/Tempomat/Radio"]]},
+{id:"ecu65",label:"ECU 65 / GRA / Radio",rows:[["ECU","Pin 65 · Blau-Weiß"],["Tempomat","GRA-Eingang"],["Radio","W/1 · Weiß-Gelb"],["Sollwert","VSS-Rechteck an allen drei Senken"]]}
+];
+var crumbs=document.getElementById('crumbs'),detail=document.getElementById('detail'),sel=null;
+function renderCrumbs(f){
+crumbs.innerHTML='';
+ST.forEach(function(s,i){
+if(f&&!(s.label+' '+s.rows.join(' ')).toLowerCase().includes(f))return;
+var b=document.createElement('button');b.className='crumb'+(sel===s.id?' sel':'');b.textContent=s.label;b.onclick=function(){sel=s.id;show(s);renderCrumbs(document.getElementById('q').value.trim().toLowerCase());};
+crumbs.appendChild(b);
+if(i<ST.length-1){var a=document.createElement('span');a.className='arrow';a.textContent='→';crumbs.appendChild(a);}
+});
+}
+function show(s){
+var h='<h2>'+s.label+'</h2><table><tr><th>Feld</th><th>Wert</th></tr>';
+s.rows.forEach(function(r){h+='<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>';});
+detail.innerHTML=h+'</table>';
+}
+renderCrumbs('');
+// Tabs
+var tabs=document.querySelectorAll('.tab-btn'),secs=[0,1,2,3,4,5].map(function(i){return document.getElementById('tab'+i);});
+function goTab(i){tabs.forEach(function(t,j){t.classList.toggle('active',i===j);});secs.forEach(function(s,j){s.style.display=i===j?'':'none';});}
+tabs.forEach(function(t){t.onclick=function(){goTab(+t.dataset.tab);};});
+// Quelle
+var sg=document.getElementById('srcGala'),sa=document.getElementById('srcArd'),an=document.getElementById('ardNote');
+sg.onclick=function(){sg.classList.add('active');sa.classList.remove('active');an.style.display='none';};
+sa.onclick=function(){sa.classList.add('active');sg.classList.remove('active');an.style.display='';};
+// Suche
+document.getElementById('q').addEventListener('input',function(e){renderCrumbs(e.target.value.trim().toLowerCase());});
+// FAKTOR
+document.getElementById('calcBtn').onclick=function(){
+var u=parseFloat(document.getElementById('circ').value),z=parseFloat(document.getElementById('teeth').value),k=parseFloat(document.getElementById('kval').value);
+if(!(u>0&&z>0&&k>0)){document.getElementById('calcOut').textContent='Bitte gültige Werte eingeben.';return;}
+var f=(k*4)/(z*1000/u),hz=(100/3.6)/u*z*f;
+document.getElementById('calcOut').textContent='FAKTOR = '+f.toFixed(4)+'  ·  Hz@100 km/h ≈ '+hz.toFixed(1)+' Hz';
+};
+// Checkliste
+var ITEMS=["Geber 321907345B: Weiß-Gelb Durchgang","G1/11: Signal an ZE","U1/11 intern: Durchgang","T28/27 Blau-Weiß: Rechteck EINGANG","Tacho k=960 prüfen (ANNAHME)","T28/07 Violett: AUSGANG","U2/02: Verteiler Durchgang","ECU Pin 65 Blau-Weiß: Signal","Tempomat: GRA übernimmt","Radio W/1 Weiß-Gelb: GALA"];
+var KEY='vss-check-v1',state={};
+try{state=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){state={};}
+var box=document.getElementById('checks');
+function renderChecks(){
+box.innerHTML='';var done=0;
+ITEMS.forEach(function(t,i){
+if(state[i])done++;
+var d=document.createElement('label');d.className='chk'+(state[i]?' done':'');
+var c=document.createElement('input');c.type='checkbox';c.checked=!!state[i];
+c.onchange=function(){state[i]=c.checked;try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}renderChecks();};
+var s=document.createElement('span');s.className='txt';s.textContent=(i+1)+'. '+t;
+d.appendChild(c);d.appendChild(s);box.appendChild(d);
+});
+document.getElementById('progBar').style.width=(done/ITEMS.length*100)+'%';
+document.getElementById('progTxt').textContent=done+'/'+ITEMS.length;
+}
+renderChecks();
+document.getElementById('resetBtn').onclick=function(){state={};try{localStorage.removeItem(KEY);}catch(e){}renderChecks();};
+// Tastatur
+document.addEventListener('keydown',function(e){
+if(e.key==='/'){e.preventDefault();document.getElementById('q').focus();}
+else if(e.key==='Escape'){window.location.href='index.html';}
+else if(/^[1-6]$/.test(e.key)&&document.activeElement.tagName!=='INPUT'){goTab(+e.key-1);}
+});
+</script>
+</body>
+</html>

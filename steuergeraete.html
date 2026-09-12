@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Systeme &amp; Steuergeräte – Auswahlmenü</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0D0D0D;color:#E8E8E8;font-family:system-ui,sans-serif;font-size:14px;line-height:1.5}
+a{color:#E8A020}.wrap{max-width:1000px;margin:0 auto;padding:16px 14px 60px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+header h1{font-size:18px;margin:0;color:#E8A020}
+.back{font-size:12px;border:1px solid #333;padding:4px 10px;border-radius:3px;text-decoration:none;color:#bbb}
+.back:hover{border-color:#E8A020;color:#E8A020}
+.searchrow{position:relative;margin-bottom:10px}
+.searchrow input{background:#141414;border:1px solid #2a2a2a;color:#E8E8E8;font-size:14px;padding:8px 10px 8px 34px;border-radius:3px;width:100%}
+.searchrow input:focus{outline:none;border-color:rgba(232,160,32,.6)}
+.searchrow .icon{position:absolute;left:10px;top:9px;color:#444}
+.kats{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.kat-btn{background:#161616;border:1px solid #2a2a2a;color:#999;font-size:12px;font-weight:600;padding:5px 12px;border-radius:3px;cursor:pointer}
+.kat-btn small{color:#555;font-weight:400}
+.kat-btn.active{background:#E8A020;color:#0D0D0D;border-color:#E8A020}
+.kat-btn.active small{color:#0D0D0D}
+.main{display:flex;gap:14px;margin-top:12px}
+@media(max-width:760px){.main{flex-direction:column}}
+.list{flex:0 0 340px;max-width:100%}
+.sg-btn{display:block;width:100%;text-align:left;background:#141414;border:1px solid #222;color:#ddd;border-radius:4px;padding:8px 10px;margin-bottom:6px;cursor:pointer;font-size:13px}
+.sg-btn:hover{border-color:#444}
+.sg-btn.active{border-color:#E8A020;background:#181410}
+.sg-btn .tn{display:block;font-size:11px;color:#777;font-family:ui-monospace,monospace}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:3px;margin-left:6px;vertical-align:middle}
+.b-pins{background:rgba(20,83,45,.4);color:#86efac;border:1px solid rgba(20,83,45,.8)}
+.b-stamm{background:#2a2a2e;color:#a1a1aa;border:1px solid #3a3a40}
+.detail{flex:1;min-width:0;background:#111;border:1px solid #222;border-radius:5px;padding:16px}
+.detail h2{margin:0 0 4px;font-size:16px;color:#E8A020}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 10px;font-size:13px;margin:10px 0}
+.kv dt{color:#777}.kv dd{margin:0;font-family:ui-monospace,monospace;font-size:12px}
+table.pins{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+table.pins th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#555;text-align:left;padding:5px 7px;border-bottom:1px solid #2a2a2a}
+table.pins td{padding:5px 7px;border-bottom:1px solid #1a1a1a;font-family:ui-monospace,monospace;vertical-align:top}
+.hint{background:#141414;border:1px solid #2a2a2a;border-radius:4px;padding:8px 12px;font-size:12px;color:#999;margin-top:12px}
+.kbd{font-family:ui-monospace,monospace;font-size:11px;background:#1c1c1c;border:1px solid #333;border-radius:3px;padding:1px 6px;color:#999}
+footer{margin-top:24px;color:#555;font-size:12px}
+.empty{color:#555;padding:20px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<a class="back" href="index.html">← Pinout-Übersicht</a>
+<a class="back" href="signalpfad.html">→ Signalpfad</a>
+<h1>Systeme &amp; Steuergeräte</h1>
+</header>
+<div class="searchrow"><span class="icon">⌕</span><input id="q" type="search" placeholder="Suchen: Name, Teilenummer, Stecker …  ( / fokussiert, Esc leert )"></div>
+<div class="kats" id="kats"></div>
+<div class="main">
+<div class="list" id="list"></div>
+<div class="detail" id="detail"><div class="empty">Links System wählen, rechts Steuergerät anklicken.</div></div>
+</div>
+<footer><span id="stat"></span> · Stand 12.09.2026, Quelle: Wissensdatenbank (privates Repo). Alle Angaben ohne Gewähr – vor Verdrahtung gegenmessen. Tasten: <span class="kbd">/</span> Suche, <span class="kbd">Esc</span> zurücksetzen.</footer>
+</div>
+<script src="sg-daten.js"></script>
+<script>
+(function(){
+var D=SG_DATEN, q=document.getElementById('q'), katsEl=document.getElementById('kats'),
+    listEl=document.getElementById('list'), detEl=document.getElementById('detail'),
+    statEl=document.getElementById('stat'), kat='alle', sel=null;
+var KATS=['alle']; D.sg.forEach(function(s){ if(KATS.indexOf(s.kategorie)<0) KATS.push(s.kategorie); });
+function pinCount(id){ return D.pinouts.filter(function(p){return p.steuergeraet_id===id;}).length; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function filtered(){
+  var t=q.value.trim().toLowerCase();
+  return D.sg.filter(function(s){
+    if(kat!=='alle'&&s.kategorie!==kat) return false;
+    if(!t) return true;
+    return (s.name+' '+(s.teilenummern||'')+' '+(s.bosch_nummern||'')+' '+(s.stecker||'')+' '+(s.einbauort||'')).toLowerCase().indexOf(t)>=0;
+  });
+}
+function renderKats(){
+  katsEl.innerHTML='';
+  KATS.forEach(function(k){
+    var n=k==='alle'?D.sg.length:D.sg.filter(function(s){return s.kategorie===k;}).length;
+    var b=document.createElement('button');
+    b.className='kat-btn'+(k===kat?' active':'');
+    b.innerHTML=esc(k)+' <small>'+n+'</small>';
+    b.onclick=function(){kat=k;sel=null;render();};
+    katsEl.appendChild(b);
+  });
+}
+var TABLABEL={ze2:'ZE2 Stecker',sicherungen:'Sicherungen & Relais',tacho:'Tacho T28',ecu:'ECU AAA',abs:'ABS System'};
+function renderList(items){
+  listEl.innerHTML='';
+  if(!items.length){listEl.innerHTML='<div class="empty">Keine Treffer.</div>';return;}
+  items.forEach(function(s){
+    var n=pinCount(s.id), b=document.createElement('button');
+    b.className='sg-btn'+(sel===s.id?' active':'');
+    b.innerHTML='<strong>'+esc(s.name)+'</strong>'+
+      (n>0?'<span class="badge b-pins">'+n+' Pins</span>':'<span class="badge b-stamm">nur Stammdaten</span>')+
+      '<span class="tn">'+esc(s.teilenummern||s.stecker||'')+'</span>';
+    b.onclick=function(){sel=s.id;render();};
+    listEl.appendChild(b);
+  });
+}
+function renderDetail(){
+  var s=D.sg.filter(function(x){return x.id===sel;})[0];
+  if(!s){detEl.innerHTML='<div class="empty">Links System wählen, rechts Steuergerät anklicken.</div>';return;}
+  var pins=D.pinouts.filter(function(p){return p.steuergeraet_id===s.id;});
+  var tab=D.appTab[String(s.id)];
+  var h='<h2>'+esc(s.name)+'</h2><div style="color:#888;font-size:12px">System: '+esc(s.kategorie)+'</div>';
+  h+='<dl class="kv">';
+  if(s.teilenummern)h+='<dt>Teilenummern</dt><dd>'+esc(s.teilenummern)+'</dd>';
+  if(s.bosch_nummern)h+='<dt>Bosch-Nrn.</dt><dd>'+esc(s.bosch_nummern)+'</dd>';
+  if(s.stecker)h+='<dt>Stecker</dt><dd>'+esc(s.stecker)+'</dd>';
+  if(s.einbauort)h+='<dt>Einbauort</dt><dd>'+esc(s.einbauort)+'</dd>';
+  if(s.fahrzeuge)h+='<dt>Fahrzeuge</dt><dd>'+esc(s.fahrzeuge)+'</dd>';
+  if(s.diagnose)h+='<dt>Diagnose</dt><dd>'+esc(s.diagnose)+'</dd>';
+  if(s.notizen)h+='<dt>Notizen</dt><dd>'+esc(s.notizen)+'</dd>';
+  h+='</dl>';
+  if(tab){h+='<div class="hint">In der Pinout-App abgedeckt → Tab <strong>'+esc(TABLABEL[tab]||tab)+'</strong> in <a href="index.html">index.html</a> öffnen.</div>';}
+  if(pins.length){
+    h+='<h3 style="font-size:13px;color:#E8A020">Pinbelegung ('+pins.length+')</h3>';
+    h+='<table class="pins"><tr><th>Pin</th><th>Funktion</th><th>Farbe</th><th>Hinweis</th></tr>';
+    pins.forEach(function(p){
+      h+='<tr><td>'+esc(p.pin)+'</td><td>'+esc(p.funktion)+'</td><td>'+esc(p.kabelfarbe||'–')+'</td><td>'+esc(p.hinweis||'')+(p.konfidenz&&p.konfidenz!=='HOCH'?' <span class="badge b-stamm">'+esc(p.konfidenz)+'</span>':'')+'</td></tr>';
+    });
+    h+='</table>';
+  } else {
+    h+='<div class="hint">Nur Stammdaten vorhanden – keine Pin-Tabelle in der Datenbank. Vor Verdrahtung am Fahrzeug/Bentley prüfen.</div>';
+  }
+  detEl.innerHTML=h;
+}
+function render(){
+  renderKats();
+  var items=filtered();
+  renderList(items);
+  renderDetail();
+  statEl.textContent=D.sg.length+' Steuergeräte · '+D.pinouts.length+' Pins · '+KATS.length-1+' Systeme';
+}
+q.addEventListener('input',function(){renderList(filtered());});
+document.addEventListener('keydown',function(e){
+  if(e.key==='/'&&document.activeElement!==q){e.preventDefault();q.focus();}
+  if(e.key==='Escape'){q.value='';kat='alle';sel=null;render();q.blur();}
+});
+render();
+})();
+</script>
+</body>
+</html>
