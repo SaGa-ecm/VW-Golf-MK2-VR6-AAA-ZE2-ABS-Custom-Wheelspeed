@@ -14,6 +14,7 @@ Interaktive Pinout-Referenz für Golf 2 GTI (19E) mit AAA-VR6-Umbau (Motronic 2.
 | `v0.1.html` | Erstversion (Archiv, mit P0-Sicherheitsfixes) |
 | `v0.1.final.html` | DEFEKT-Stub (Hinweisseite, kein Editor – `v0.1.html` nutzen) |
 | `signalpfad.html` | VSS-Signalpfad-Tracer (Quelle→Stecker→Bauteil→Verteilung, Checkliste, FAKTOR-Rechner) |
+| `steuergeraete.html` (+ `sg-daten.js`) | System-/Steuergeräte-Auswahlmenü (27 SG, 328 Pins, App-Tab-Verweise) |
 | `docs/abs-mk04-mk20-recherche.md` | Mk04/Mk20-Pinrecherche mit Quellen + Konfidenz |
 | `golf2_gti_ze2_tacho_pinout.pdf` | PDF-Export |
 | `mermaid.mermaid`, `mindmap.txt`, `mindmapv01.txt` | Diagramme/Notizen |
