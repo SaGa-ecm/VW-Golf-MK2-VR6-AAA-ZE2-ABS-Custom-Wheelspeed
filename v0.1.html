@@ -2340,6 +2340,10 @@ function parseXDF(xdfStr) {
         const block = match[1];
         const fields = extractFields(block);
         if (fields.Title && fields.Title.trim() !== '' && !fields.Title.includes('-----')) {
+            if (fields.Address !== undefined && !Number.isInteger(fields.Address)) {
+                logError(`XDF-Tabelle "${fields.Title}" verworfen: ungültige Adresse (${String(fields.Address)}).`);
+                continue;
+            }
             tables.push(fields);
         }
     }
@@ -2353,7 +2357,59 @@ function parseXDF(xdfStr) {
         }
     }
 
-    return { tables, constants };
+    return { tables, constants, header: parseXDFHeader(xdfStr) };
+}
+
+// XDF-Header auswerten: BinSize + BaseOffset (Default: 0xFFFF / 0).
+// Die Checksummen-Adresse selbst steht in den %%CONSTANT%%-Einträgen
+// (z. B. "Checksum?" @ 0xFFFD) und wird via resolveChecksumInfo() aufgelöst.
+function parseXDFHeader(xdfStr) {
+    let binSize = 0xFFFF;
+    let baseOffset = 0;
+    const headerMatch = xdfStr.match(/%%HEADER%%([\s\S]*?)(?=%%END%%|%%TABLE%%|%%CONSTANT%%|%%HEADER%%|$)/);
+    if (headerMatch) {
+        const binMatch = headerMatch[1].match(/BinSize\s*=\s*(0x[0-9A-Fa-f]+|\d+)/);
+        if (binMatch) {
+            const parsed = binMatch[1].startsWith('0x') ? parseInt(binMatch[1], 16) : parseInt(binMatch[1], 10);
+            if (!isNaN(parsed) && parsed > 0) binSize = parsed;
+            else logError(`XDF-Header: ungültige BinSize "${binMatch[1]}" – Default 0xFFFF verwendet.`);
+        }
+        const baseMatch = headerMatch[1].match(/BaseOffset\s*=\s*(0x[0-9A-Fa-f]+|\d+)/);
+        if (baseMatch) {
+            const parsed = baseMatch[1].startsWith('0x') ? parseInt(baseMatch[1], 16) : parseInt(baseMatch[1], 10);
+            if (!isNaN(parsed)) baseOffset = parsed;
+        }
+    }
+    return { binSize, baseOffset };
+}
+
+// Checksummen-Info aus den XDF-Konstanten + Header auflösen (P0.1).
+// Liefert { addr|null, binSize, rangeStart, rangeEnd }. addr ist null,
+// wenn keine Checksummen-Konstante definiert ist (dann kein Schreiben!).
+function resolveChecksumInfo(xdf) {
+    let addr = null;
+    if (xdf && xdf.constants) {
+        const cs = xdf.constants.find(c => c.Title && /checksum/i.test(c.Title));
+        if (cs && Number.isInteger(cs.Address)) addr = cs.Address;
+        else if (cs) logError(`Checksummen-Konstante "${cs.Title}" hat ungültige Adresse (${String(cs.Address)}).`);
+    }
+    const binSize = (xdf && xdf.header && Number.isInteger(xdf.header.binSize)) ? xdf.header.binSize : 0xFFFF;
+    return { addr, binSize, rangeStart: 0x8000, rangeEnd: Math.min(0x10000, binSize) };
+}
+
+// TunerPro-XDF Flags: Bit 0 = Big-Endian (Motorola-Byteorder), sonst Little-Endian (Intel).
+// Alle mitgelieferten Tabellen nutzen Flags=0x30 -> Little-Endian (bisheriges Verhalten).
+const XDF_FLAG_BIG_ENDIAN = 0x01;
+function xdfIsBigEndian(flags) {
+    return (((typeof flags === 'number' ? flags : 0) & XDF_FLAG_BIG_ENDIAN) !== 0);
+}
+function xdfLittleEndian(flags) {
+    return !xdfIsBigEndian(flags);
+}
+
+// HTML-Escaping für XDF-kontrollierte Strings (Titel/Fehler) vor innerHTML.
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function extractFields(block) {
@@ -2370,7 +2426,12 @@ function extractFields(block) {
                 value = value.slice(1, -1);
             }
             if (typeof value === 'string' && value.startsWith('0x')) {
-                value = parseInt(value, 16);
+                const parsed = parseInt(value, 16);
+                if (isNaN(parsed)) {
+                    logError(`XDF-Feld "${key}" mit ungültigem Hex-Wert "${value}" verworfen.`);
+                    continue;
+                }
+                value = parsed;
             }
             fields[key] = value;
         }
@@ -2381,6 +2442,9 @@ function extractFields(block) {
 // ===================================================================
 // 3. XDF-ERKENNUNG (verbessert)
 // ===================================================================
+// Mindest-Score für eine gültige XDF-Erkennung (P0.2):
+// ECU-Nummern-Treffer gibt +3 – darunter gilt die Datei als UNBEKANNT.
+const XDF_MIN_SCORE = 3;
 function detectXDF(dataView) {
     const xdfList = XDF_STRINGS.map(str => parseXDF(str));
     let bestScore = -1;
@@ -2424,10 +2488,20 @@ function detectXDF(dataView) {
             bestXDF = { index: i, parsed: parsed };
         }
     }
-    if (!bestXDF && xdfList.length > 0) {
-        bestXDF = { index: 0, parsed: xdfList[0] };
+    if (bestXDF && bestScore >= XDF_MIN_SCORE) {
+        return { index: bestXDF.index, parsed: bestXDF.parsed, unknown: false, score: bestScore };
     }
-    return bestXDF;
+    // Expliziter Unbekannt-Modus (P0.2): kein stiller Fallback auf Index 0.
+    // Der Aufrufer muss Edit/Save deaktivieren und nur Hex-Ansicht zeigen.
+    return { index: -1, parsed: null, unknown: true, score: bestScore };
+}
+
+// Schaltet Edit/Save im Unbekannt-Modus ab (P0.2).
+function setEditSaveEnabled(enabled) {
+    const saveBtn = document.getElementById('saveBtn');
+    const checksumBtn = document.getElementById('checksumBtn');
+    if (saveBtn) saveBtn.disabled = !enabled;
+    if (checksumBtn) checksumBtn.disabled = !enabled;
 }
 
 // ===================================================================
@@ -2454,8 +2528,8 @@ function logError(msg) {
 
 function readBytesSafe(addr, len) {
     if (!fileData) return null;
-    if (addr < 0 || addr + len > fileData.byteLength) {
-        logError(`Adresse 0x${addr.toString(16)} + ${len} außerhalb der Dateigröße (${fileData.byteLength})`);
+    if (!Number.isInteger(addr) || !Number.isInteger(len) || len < 0 || addr < 0 || addr + len > fileData.byteLength) {
+        logError(`Ungültiger Lesezugriff: Adresse ${String(addr)} + ${String(len)} (Dateigröße: ${fileData.byteLength})`);
         return null;
     }
     return new Uint8Array(fileData, addr, len);
@@ -2466,10 +2540,10 @@ function readUint8Safe(addr) {
     return bytes ? bytes[0] : null;
 }
 
-function readUint16Safe(addr) {
+function readUint16Safe(addr, littleEndian = true) {
     const bytes = readBytesSafe(addr, 2);
     if (!bytes) return null;
-    return (bytes[0] | (bytes[1] << 8));
+    return littleEndian ? (bytes[0] | (bytes[1] << 8)) : ((bytes[0] << 8) | bytes[1]);
 }
 
 // ===================================================================
@@ -2513,7 +2587,7 @@ const UNIT_MAP = {
 };
 
 // Achsensuche: 8-Bit oder 16-Bit, aufsteigend prüfen
-function findAxis(dataView, mapAddr, count, searchRange = 256, isX = true) {
+function findAxis(dataView, mapAddr, count, searchRange = 256, isX = true, littleEndian = true) {
     // 1. Direkte Adressen aus XDF? Werden später in analyzeMap übergeben.
     // 2. Suche im Bereich vor der Map
     for (let offset = 0; offset < searchRange; offset++) {
@@ -2528,10 +2602,10 @@ function findAxis(dataView, mapAddr, count, searchRange = 256, isX = true) {
         if (vals8.length === count && isAscending(vals8)) {
             return { values: vals8, is16Bit: false, addr };
         }
-        // Versuche 16-Bit
+        // Versuche 16-Bit (Endianness aus XDF-Flags, P1.2)
         const vals16 = [];
         for (let i = 0; i < count; i++) {
-            const v = readUint16Safe(addr + i * 2);
+            const v = readUint16Safe(addr + i * 2, littleEndian);
             if (v === null) break;
             vals16.push(v);
         }
@@ -2581,16 +2655,34 @@ function validateMap(title, rawValues, factor, offset, cat0ID) {
     return { issues, score, isValid: issues.length === 0 };
 }
 
-// Analyse einer Map
+// Analyse einer Map (Rows/Cols auf max. 32x32 begrenzt, P1.1)
+const MAP_MAX_DIM = 32;
 function analyzeMap(mapDef) {
-    const rows = mapDef.Rows || 1;
-    const cols = mapDef.Cols || 16;
+    let rows = mapDef.Rows || 1;
+    let cols = mapDef.Cols || 16;
+    if (!Number.isInteger(rows) || rows < 1) {
+        logError(`Kennfeld "${mapDef.Title}": ungültige Rows (${String(rows)}) – 1 verwendet.`);
+        rows = 1;
+    }
+    if (!Number.isInteger(cols) || cols < 1) {
+        logError(`Kennfeld "${mapDef.Title}": ungültige Cols (${String(cols)}) – 16 verwendet.`);
+        cols = 16;
+    }
+    if (rows > MAP_MAX_DIM || cols > MAP_MAX_DIM) {
+        logError(`Kennfeld "${mapDef.Title}": ${rows}x${cols} auf ${MAP_MAX_DIM}x${MAP_MAX_DIM} begrenzt.`);
+        rows = Math.min(rows, MAP_MAX_DIM);
+        cols = Math.min(cols, MAP_MAX_DIM);
+    }
     const addr = mapDef.Address;
+    if (!Number.isInteger(addr) || addr < 0) {
+        throw new Error(`Kennfeld ${mapDef.Title} hat ungültige Adresse (${String(addr)})`);
+    }
     const eq = mapDef.ZEq || 'X,TH|0|0|0|0|';
     const { factor, offset } = parseEquation(eq);
     const unitX = UNIT_MAP[mapDef.XUnits] || mapDef.XUnits || '';
     const unitY = UNIT_MAP[mapDef.YUnits] || mapDef.YUnits || '';
     const unitZ = UNIT_MAP[mapDef.ZUnits] || mapDef.ZUnits || '';
+    const littleEndian = xdfLittleEndian(mapDef.Flags);
 
     const rawValues = readBytesSafe(addr, rows * cols);
     if (!rawValues) {
@@ -2621,7 +2713,7 @@ function analyzeMap(mapDef) {
             if (xDataSize === 2) {
                 const arr = [];
                 for (let i = 0; i < cols; i++) {
-                    const v = (xBytes[i*2] | (xBytes[i*2+1] << 8));
+                    const v = littleEndian ? (xBytes[i*2] | (xBytes[i*2+1] << 8)) : ((xBytes[i*2] << 8) | xBytes[i*2+1]);
                     arr.push(v);
                 }
                 xLabels = arr;
@@ -2636,7 +2728,7 @@ function analyzeMap(mapDef) {
             if (yDataSize === 2) {
                 const arr = [];
                 for (let i = 0; i < rows; i++) {
-                    const v = (yBytes[i*2] | (yBytes[i*2+1] << 8));
+                    const v = littleEndian ? (yBytes[i*2] | (yBytes[i*2+1] << 8)) : ((yBytes[i*2] << 8) | yBytes[i*2+1]);
                     arr.push(v);
                 }
                 yLabels = arr;
@@ -2648,11 +2740,11 @@ function analyzeMap(mapDef) {
 
     // Fallback: Suche automatisch nach Achsen
     if (!xLabels) {
-        const found = findAxis(dataView, addr, cols, 256, true);
+        const found = findAxis(dataView, addr, cols, 256, true, littleEndian);
         if (found) xLabels = found.values;
     }
     if (!yLabels) {
-        const found = findAxis(dataView, addr, rows, 256, false);
+        const found = findAxis(dataView, addr, rows, 256, false, littleEndian);
         if (found) yLabels = found.values;
     }
     // Wenn immer noch keine Achsen, Index verwenden
@@ -2671,10 +2763,11 @@ function analyzeScalar(scalarDef) {
     const eq = scalarDef.Equation || 'X,TH|0|0|0|0|';
     const { factor, offset } = parseEquation(eq);
     const unit = UNIT_MAP[scalarDef.Units] || scalarDef.Units || '';
+    const littleEndian = xdfLittleEndian(scalarDef.Flags);
     let raw, value;
     const is16Bit = (scalarDef.OutType === 0x2 || scalarDef.SizeInBits === 0x10);
     if (is16Bit) {
-        raw = readUint16Safe(addr);
+        raw = readUint16Safe(addr, littleEndian);
         if (raw === null) throw new Error(`Skalar ${scalarDef.Title} konnte nicht gelesen werden (Adresse 0x${addr.toString(16)})`);
         value = raw * factor + offset;
     } else {
@@ -2782,9 +2875,9 @@ function renderNav(analysis) {
 function renderDetail(key, item) {
     const area = document.getElementById('contentArea');
     if (!item) { area.innerHTML = '<div class="message">Keine Daten.</div>'; return; }
-    if (item.type === 'error') { area.innerHTML = `<div class="message">Fehler: ${item.error}</div>`; return; }
+    if (item.type === 'error') { area.innerHTML = `<div class="message">Fehler: ${escapeHtml(item.error)}</div>`; return; }
 
-    let html = `<h2>${key} <small>${item.type || ''}</small></h2>`;
+    let html = `<h2>${escapeHtml(key)} <small>${escapeHtml(item.type || '')}</small></h2>`;
 
     if (item.type === 'map') {
         const data = item.data;
@@ -2864,7 +2957,7 @@ function renderDetail(key, item) {
         input.addEventListener('change', function() {
             const addrAttr = this.dataset.addr;
             if (!addrAttr) return;
-            const addr = parseInt(addrAttr);
+            const addr = parseInt(addrAttr, 10);
             if (isNaN(addr)) return;
             let val = parseFloat(this.value);
             if (isNaN(val)) return;
@@ -2908,16 +3001,20 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
         document.getElementById('statusText').className = 'status loaded';
 
         const detected = detectXDF(dataView);
-        if (detected) {
+        if (detected && !detected.unknown && detected.parsed) {
             currentXDF = detected.parsed;
-            document.getElementById('statusText').textContent += ` → XDF erkannt (${detected.index+1})`;
+            setEditSaveEnabled(true);
+            document.getElementById('statusText').textContent += ` → XDF erkannt (${detected.index+1}, Score ${detected.score})`;
             analysisResults = analyzeAll(currentXDF);
             renderNav(analysisResults);
         } else {
-            document.getElementById('statusText').textContent += ' → Keine XDF erkannt, verwende erste.';
-            currentXDF = parseXDF(XDF_STRINGS[0]);
-            analysisResults = analyzeAll(currentXDF);
+            // Expliziter Unbekannt-Modus (P0.2): kein Edit/Save, nur Hex-Ansicht.
+            currentXDF = null;
+            setEditSaveEnabled(false);
+            document.getElementById('statusText').textContent += ` → Unbekanntes Format (Score ${detected ? detected.score : '–'}) – nur Hex-Ansicht, Edit/Save deaktiviert.`;
+            analysisResults = { 'Rohdaten (Hex-Dump)': { type: 'hexdump', data: analyzeHexdump() } };
             renderNav(analysisResults);
+            logError('Keine passende XDF erkannt (Mindest-Score nicht erreicht) – Unbekannt-Modus.');
         }
         changes = {};
     };
@@ -2927,46 +3024,82 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 // ===================================================================
 // 9. SPEICHERN & CHECKSUMME
 // ===================================================================
-function recalcChecksum(buffer, checksumAddr) {
+// Checksumme neu berechnen. Adresse/Bereich stammen aus resolveChecksumInfo()
+// (XDF-Konstanten + BinSize, P0.1); vor dem Schreiben erfolgen Adress- und
+// BinSize-Checks (P1.4). littleEndian folgt den XDF-Flags (P1.2).
+function recalcChecksum(buffer, checksumAddr, options = {}) {
     const view = new DataView(buffer);
+    const littleEndian = options.littleEndian !== undefined ? options.littleEndian : true;
+    const rangeStart = Number.isInteger(options.rangeStart) ? options.rangeStart : 0x8000;
+    const rangeEnd = Number.isInteger(options.rangeEnd) ? options.rangeEnd : Math.min(0x10000, view.byteLength);
+    if (options.expectedSize !== undefined && view.byteLength < options.expectedSize) {
+        const msg = `BinSize-Check fehlgeschlagen: Datei hat ${view.byteLength} Bytes, XDF erwartet ${options.expectedSize}. Checksumme nicht geschrieben.`;
+        logError(msg);
+        throw new Error(msg);
+    }
+    if (!Number.isInteger(checksumAddr) || checksumAddr < 0 || checksumAddr + 2 > view.byteLength) {
+        const msg = `Checksummen-Adresse ${String(checksumAddr)} außerhalb der Datei (${view.byteLength} Bytes) – nicht geschrieben.`;
+        logError(msg);
+        throw new Error(msg);
+    }
     let sum = 0;
-    for (let i = 0x8000; i < 0x10000; i++) {
+    const end = Math.min(rangeEnd, view.byteLength);
+    for (let i = rangeStart; i < end; i++) {
         if (i === checksumAddr || i === checksumAddr + 1) continue;
         sum += view.getUint8(i);
     }
     const checksum = (-sum) & 0xFFFF;
-    view.setUint16(checksumAddr, checksum, true);
+    view.setUint16(checksumAddr, checksum, littleEndian);
     return checksum;
 }
 
 function saveModifiedBin() {
     if (!fileData) { alert('Keine Datei geladen!'); return; }
+    if (!currentXDF) { alert('Unbekanntes Format – Speichern deaktiviert. Nur Hex-Ansicht.'); return; }
+    const csInfo = resolveChecksumInfo(currentXDF);
+    // BinSize-Check vor dem Schreiben (P0.1): Datei muss der XDF-BinSize entsprechen.
+    if (fileData.byteLength < csInfo.binSize) {
+        const msg = `BinSize-Check fehlgeschlagen: Datei hat ${fileData.byteLength} Bytes, XDF erwartet ${csInfo.binSize}. Speichern abgebrochen.`;
+        logError(msg);
+        alert(msg);
+        return;
+    }
     const newBuffer = new ArrayBuffer(fileData.byteLength);
     const newView = new DataView(newBuffer);
     const origBytes = new Uint8Array(fileData);
     const newBytes = new Uint8Array(newBuffer);
     newBytes.set(origBytes);
 
+    let skipped = 0;
     for (const [addrStr, rawVal] of Object.entries(changes)) {
-        const addr = parseInt(addrStr);
+        const addr = parseInt(addrStr, 10);
         let is16Bit = false;
+        let littleEndian = true;
         if (currentXDF && currentXDF.constants) {
             for (const constDef of currentXDF.constants) {
                 if (constDef.Address === addr) {
                     if (constDef.OutType === 0x2 || constDef.SizeInBits === 0x10) {
                         is16Bit = true;
                     }
+                    littleEndian = xdfLittleEndian(constDef.Flags);
                     break;
                 }
             }
+        }
+        // Adress-Bounds gegen fileData.byteLength (P1.4)
+        const need = is16Bit ? 2 : 1;
+        if (!Number.isInteger(addr) || addr < 0 || addr + need > newBuffer.byteLength) {
+            logError(`Änderung bei Adresse ${addrStr} außerhalb der Datei (${newBuffer.byteLength} Bytes) – übersprungen.`);
+            skipped++;
+            continue;
         }
         if (is16Bit) {
             if (rawVal < 0 || rawVal > 65535) {
                 alert(`Wert ${rawVal} bei Adresse 0x${addr.toString(16)} außerhalb des 16-Bit-Bereichs.`);
                 const clamped = Math.max(0, Math.min(65535, rawVal));
-                newView.setUint16(addr, clamped, true);
+                newView.setUint16(addr, clamped, littleEndian);
             } else {
-                newView.setUint16(addr, rawVal, true);
+                newView.setUint16(addr, rawVal, littleEndian);
             }
         } else {
             if (rawVal < 0 || rawVal > 255) {
@@ -2979,14 +3112,15 @@ function saveModifiedBin() {
         }
     }
 
-    let checksumAddr = 0xFFFE;
-    if (currentXDF && currentXDF.constants) {
-        const cs = currentXDF.constants.find(c => c.Title && c.Title.toLowerCase().includes('checksum'));
-        if (cs && cs.Address !== undefined) {
-            checksumAddr = cs.Address;
-        }
+    let checksumNote;
+    if (csInfo.addr === null) {
+        checksumNote = 'Keine Checksummen-Adresse in der XDF definiert – ohne Checksummen-Update gespeichert.';
+        logError(checksumNote);
+    } else {
+        const csLittleEndian = true; // Checksummen-Konstante trägt keine Flags -> Default Little-Endian
+        const checksum = recalcChecksum(newBuffer, csInfo.addr, { littleEndian: csLittleEndian, rangeStart: csInfo.rangeStart, rangeEnd: csInfo.rangeEnd, expectedSize: csInfo.binSize });
+        checksumNote = `Checksumme: 0x${checksum.toString(16).padStart(4, '0')} (Adresse 0x${csInfo.addr.toString(16)}, Bereich 0x${csInfo.rangeStart.toString(16)}-0x${csInfo.rangeEnd.toString(16)})`;
     }
-    const checksum = recalcChecksum(newBuffer, checksumAddr);
 
     const blob = new Blob([newBuffer], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
@@ -2997,21 +3131,17 @@ function saveModifiedBin() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    alert(`Datei gespeichert. Checksumme: 0x${checksum.toString(16).padStart(4, '0')}`);
+    alert(`Datei gespeichert. ${checksumNote}${skipped > 0 ? ` ${skipped} Änderung(en) außerhalb der Datei übersprungen.` : ''}`);
 }
 
 document.getElementById('saveBtn').addEventListener('click', saveModifiedBin);
 document.getElementById('checksumBtn').addEventListener('click', function() {
     if (!fileData) { alert('Keine Datei geladen!'); return; }
-    let checksumAddr = 0xFFFE;
-    if (currentXDF && currentXDF.constants) {
-        const cs = currentXDF.constants.find(c => c.Title && c.Title.toLowerCase().includes('checksum'));
-        if (cs && cs.Address !== undefined) {
-            checksumAddr = cs.Address;
-        }
-    }
-    const sum = recalcChecksum(fileData, checksumAddr);
-    alert(`Aktuelle Checksumme (Bereich 0x8000-0xFFFF): 0x${sum.toString(16).padStart(4, '0')} (Adresse 0x${checksumAddr.toString(16)})`);
+    if (!currentXDF) { alert('Unbekanntes Format – Checksumme deaktiviert.'); return; }
+    const csInfo = resolveChecksumInfo(currentXDF);
+    if (csInfo.addr === null) { alert('Keine Checksummen-Adresse in der XDF definiert.'); return; }
+    const sum = recalcChecksum(fileData, csInfo.addr, { rangeStart: csInfo.rangeStart, rangeEnd: csInfo.rangeEnd, expectedSize: csInfo.binSize });
+    alert(`Aktuelle Checksumme (Bereich 0x${csInfo.rangeStart.toString(16)}-0x${csInfo.rangeEnd.toString(16)}): 0x${sum.toString(16).padStart(4, '0')} (Adresse 0x${csInfo.addr.toString(16)})`);
 });
 </script>
 </body>

@@ -1,9 +1,7 @@
-graph TD
-    A[Prototyp] --> B[Feedback]
-    B --> C[Überarbeitung]
-    C --> D[Test mit Binärdateien]
-    D --> E[Validierung]
-    E -->|Fehler| C
-    E -->|OK| F[Release]
-    F --> G[Benutzer-Feedback]
-    G --> C
+graph LR
+    Geber["Geber (GALA-Hall / ABS-VR)"] --> G1_11["G1/11 (Blau-Weiß, ZE-Eingang)"]
+    G1_11 --> U1_11["U1/11 (Blau-Weiß, KI-Kabelbaum 1)"]
+    U1_11 --> T28_27["T28/27 (Blau-Weiß, VSS-EINGANG Tacho)"]
+    T28_27 --> T28_07["T28/07 (Violett, VSS-AUSGANG Tacho)"]
+    T28_07 --> U2_02["U2/02 (Violett, KI-Kabelbaum 2)"]
+    U2_02 --> ECU65["ECU Pin 65 (Blau-Weiß, VSS-Eingang)"]

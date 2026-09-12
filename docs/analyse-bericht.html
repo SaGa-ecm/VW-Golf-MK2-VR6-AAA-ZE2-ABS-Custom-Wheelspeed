@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VW Golf 2 VR6 – Repo-Analyse, VSS-Kette, Massnahmenplan</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#111;color:#e8e8e8;margin:0;font-size:14px;line-height:1.55}
+main{max-width:1000px;margin:0 auto;padding:24px}
+h1{color:#E8A020;font-weight:600}h2{color:#E8A020;border-bottom:1px solid #333;padding-bottom:6px;margin-top:36px}
+h3{color:#f5d0a9}table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th{text-align:left;color:#E8A020;text-transform:uppercase;font-size:11px;padding:6px 8px;border-bottom:1px solid #444}
+td{padding:6px 8px;border-bottom:1px solid #222;vertical-align:top}
+tr:hover td{background:#181818}
+code{background:#222;padding:1px 5px;border-radius:3px;font-size:12px}
+pre{background:#080808;border:1px solid #333;border-radius:4px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.5}
+.badge{display:inline-block;padding:1px 8px;border-radius:3px;font-size:11px;font-weight:700}
+.krit{background:#7f1d1d;color:#fca5a5}.hoch{background:#713f12;color:#fef08a}
+.mittel{background:#1e3a5f;color:#93c5fd}.ok{background:#14532d;color:#86efac}
+.luecke{background:#3f3f46;color:#e4e4e7}.quelle{color:#888;font-size:12px}.check{color:#7bed9f}
+.warnbox{border:1px solid #713f12;background:#1c1206;padding:10px 14px;border-radius:4px;margin:12px 0}
+.kritbox{border:1px solid #7f1d1d;background:#1c0606;padding:10px 14px;border-radius:4px;margin:12px 0}
+.okbox{border:1px solid #14532d;background:#06180e;padding:10px 14px;border-radius:4px;margin:12px 0}
+a{color:#E8A020}
+nav.toc{background:#181818;border:1px solid #333;border-radius:4px;padding:12px 18px;margin:16px 0}
+nav.toc li{margin:3px 0}
+footer{color:#666;font-size:12px;margin-top:40px;border-top:1px solid #333;padding-top:12px}
+</style>
+</head>
+<body>
+<main>
+<h1>VW Golf MK2 VR6 AAA – Repo-Analyse, VSS-Signalkette &amp; Massnahmenplan</h1>
+<p>Repo: <code>SaGa-ecm/VW-Golf-MK2-VR6-AAA-ZE2-ABS-Custom-Wheelspeed</code> · Stand: main <code>c5c9cb8</code> (11.09.2026) · Methode: alle Befunde per Direkt-Read der Dateien verifiziert, Fachwissen per Web-Recherche mit Quellen. Lokal-Clone == Remote-HEAD (identische History).</p>
+
+<nav class="toc"><strong>Inhalt</strong><ol>
+<li><a href="#bestand">Repo-Bestand</a></li>
+<li><a href="#vss">VSS-Signalkette: Quelle → Stecker → Bauteil → Verteilung</a></li>
+<li><a href="#fehler">Fehler- &amp; Lückenliste (F1–F13)</a></li>
+<li><a href="#wissen">Wissensbeschaffung (extern verifiziert)</a></li>
+<li><a href="#umsetzung">Umsetzungsplan Schritt für Schritt</a></li>
+<li><a href="#failsafe">Failsafe-Plan</a></li>
+<li><a href="#menue">Menü- &amp; Steuerungskonzept</a></li>
+</ol></nav>
+
+<h2 id="bestand">1. Repo-Bestand (10 Dateien, verifiziert per Tree-API + Clone)</h2>
+<table>
+<tr><th>Datei</th><th>Größe</th><th>Befund</th></tr>
+<tr><td><code>index.html</code> (= live auf GitHub Pages)</td><td>340 KB</td><td>Pinout-App v3. <span class="badge ok">OK</span> Byte-identisch mit <code>golf2-gti-pinout-referenz-v3.html</code> – kein Drift.</td></tr>
+<tr><td><code>golf2-gti-pinout-referenz-v3.html</code></td><td>340 KB</td><td>Versionierte Kopie v3 (Mk02 korrigiert, Mk04-T55/Mk20-T25 ergänzt).</td></tr>
+<tr><td><code>VW Golf 2 GTI – Pinout-Referenz (ZE2 _ Tacho T28 _ ECU AAA).html</code></td><td>328 KB</td><td>Vorversion v2 (Archiv). Hinweis: Commit <code>c5c9cb8</code> („Steuergeräte-Filter") änderte <strong>nur diese Archiv-Datei</strong>, nicht <code>index.html</code> – prüfen, ob die Live-Seite den Filter wirklich enthält.</td></tr>
+<tr><td><code>v0.1.html</code></td><td>114 KB</td><td>XDF-Editor (19 JS-Funktionen). Funktionsfähig, aber 8 Bugs (s. F8).</td></tr>
+<tr><td><code>v0.1.final.html</code></td><td>12 KB</td><td><span class="badge krit">STUB</span> Keine Weiterentwicklung: einzige Funktion <code>loadXBuf</code> ruft undefinierte <code>parseXDF/renderXDF/renderHexDump/loadXDF</code> auf; Buttons ohne Listener; Kommentar Z.143: <code>// ... (rest of the editor script would continue here)</code>. Jeder Klick → ReferenceError. Commit-Message („with bug fixes") ist falsch.</td></tr>
+<tr><td><code>golf2_gti_ze2_tacho_pinout.pdf</code></td><td>456 KB</td><td>PDF-Export, erstellt 04.09.2026 (älter als v3 vom 10.09.) – vermutlich veraltet.</td></tr>
+<tr><td><code>README.md</code></td><td>1,8 KB</td><td>Verweist auf <code>db/vw-wissen2.db + vw-wissen.sql</code> – existiert im Public-HEAD <strong>nicht</strong> (seit <code>a6b9e33</code> ins private Repo umgezogen). Toter Verweis (s. F5).</td></tr>
+<tr><td><code>mermaid.mermaid</code></td><td>225 B</td><td>Generischer Prototyp-Loop (A→B→C…), kein VSS-/Verdrahtungsdiagramm. Themenfremd.</td></tr>
+<tr><td><code>mindmap.txt</code> / <code>mindmapv01.txt</code></td><td>6,3 / 4,9 KB</td><td>Strategie-Notizen zum <strong>XDF-Editor</strong>, nicht zum Pinout/VSS-Thema. Fehlablage.</td></tr>
+</table>
+<p>Datenvolumen <code>index.html</code>: 216 Pin-Tripel (ZE2/ECU/ABS), 28 T28-Einträge, 183 SG-Pins, 4 Radsensoren, 2 VSS-Lösungspfade, eingebettete Arduino-Firmware.</p>
+
+<h2 id="vss">2. VSS-Signalkette – wo fängt VSS an, über welche Stecker/Bauteile läuft es, wo verteilt es sich</h2>
+<div class="okbox"><strong>Kernaussage (Doku + Recherche konsistent):</strong> Das ABS-Steuergerät liefert <strong>kein</strong> VSS (Mk02 Pin 19 = reserviert; Mk04/Mk20 ebenfalls kein fahrzeugseitiger VSS-Ausgang – erst CAN-Bus-Fahrzeuge haben das). VSS kommt immer vom Getriebe-/Tacho-Pfad oder vom Arduino-Wandler.</div>
+<h3>Option A (empfohlen): GALA-Hallgeber 321 907 345 B</h3>
+<pre>02A-Getriebe (Tachowellen-Ritzel)
+  │ mechanisch: Tachowelle (fuer 02A-Swap als Zubehoer erhaeltlich, Clip 171957803G / Schraube 171957803B)
+  ▼
+Tacho VDO (Magnetscheibe am Welleneingang)
+  │  GALA-Hallgeber 321 907 345 B, in Tacho-Rueckseite eingeschraubt
+  │  3 Kabel: +12V (Kl.15) / Signal WEISS-GELB / Masse
+  ▼  Signal WEISS-GELB
+ZE2-Stecker G1/11 ──(ZE-intern)──► U1/11
+  ▼  BLAU-WEISS
+T28/27  = VSS-EINGANG Tacho
+  │  Tacho-Elektronik bereitet Signal auf (verstaerkt/formt)
+  ▼  VIOLETT
+T28/07  = VSS-AUSGANG Tacho ──► U2/02 ──► Verteilung:
+  ├──► ECU Pin 65 (BLAU-WEISS, Motronic M2.9.1, VSS-Eingang)
+  ├──► Tempomat (GRA)
+  └──► Radio-GALA (ab W/1: Farbwechsel BLAU-WEISS → WEISS-GELB Richtung Radio)
+Frequenz: ~107 Hz @ 100 km/h (k=960 U/km × 4 Imp./U = 3840 Imp./km; 3840×100/3600 = 106,7 Hz)</pre>
+<h3>Option B: Arduino-Wandler (Custom-Wheelspeed, wenn keine Tachowelle)</h3>
+<pre>G47 Radsensor vo. li. (VR, passiv-induktiv, 45 Zaehne VA / 43 HA, ~1 kΩ)
+  ├── BRAUN (Signal+)      ──► ABS-SG Pin 5   (HOCHOHMIG abgreifen, Leitung NICHT durchtrennen!)
+  └── BRAUN-WEISS (Return) ──► ABS-SG Pin 23  (Repo-Schritt nennt fälschlich „G47 Pin 1", s. F3)
+  ▼  (Wechselspannung, einige 100 mV bis Volt)
+LM393-Komparator (5V, Referenz 2,5V, 100nF-Einkopplung)
+  ▼  5V-Rechteck
+Arduino Nano D2 (INT0) ──► D9 ──► PC817-OPTOKOPPLER (Pflicht!) ──► BC547 ──► T28/27 + (ueber Tacho) ECU Pin 65
+  Versorgung: Kl.15 → Sicherung → 7805 → Arduino-5V-Pin (NICHT VIN), gemeinsame Masse
+  Skalierung: FAKTOR = (960×4)/(45×1000/1,83) ≈ 0,156 (195/50R15, VA 45 Zaehne) – bei anderen Reifen/Zaehnen neu berechnen + GPS-Abgleich</pre>
+<h3>VSS-Stationstabelle (zum Abhaken am Fahrzeug)</h3>
+<table>
+<tr><th>#</th><th>Station</th><th>Stecker/Pin</th><th>Kabelfarbe</th><th>Signal</th></tr>
+<tr><td>1</td><td>Getriebe 02A (Ritzel/Welle) oder G47-Sensor</td><td>– / SG Pin 5+23</td><td>– / Braun + Braun-Weiß</td><td>mechanisch / ~600–700 Hz VR</td></tr>
+<tr><td>2</td><td>GALA-Geber 321 907 345 B (Opt. A)</td><td>3-pol. am Tacho</td><td>Weiß-Gelb (Signal)</td><td>4 Imp./U, ~107 Hz @100</td></tr>
+<tr><td>3</td><td>ZE2 G1/11 → intern U1/11</td><td>G1/11, U1/11</td><td>Weiß-Gelb → Weiß-Blau</td><td>VSS-Eingangspfad</td></tr>
+<tr><td>4</td><td>Tacho-Eingang</td><td>T28/27</td><td>Blau-Weiß</td><td>EINGANG (nicht mit T28/07 vertauschen!)</td></tr>
+<tr><td>5</td><td>Tacho-Ausgang</td><td>T28/07</td><td>Violett</td><td>AUSGANG → U2/02</td></tr>
+<tr><td>6a</td><td>ECU AAA</td><td>Pin 65</td><td>Blau-Weiß</td><td>VSS (Leerlauf, Schubabschaltung, Kennfeld)</td></tr>
+<tr><td>6b</td><td>Tempomat / Radio</td><td>W/1 (ab dort Weiß-Gelb)</td><td>Blau-Weiß → Weiß-Gelb</td><td>GALA-Verteilung</td></tr>
+<tr><td>7</td><td>DZM-Pfad (separat!)</td><td>ECU Pin 22 → G1/12 → U1/06 → T28/10</td><td>Grün-Schwarz → Grün</td><td>6→4-Zyl.-Wandler + Zündsignalsimulator nötig</td></tr>
+<tr><td>8</td><td>MFA-Verbrauch (separat!)</td><td>ECU Pin 51 → T28/26</td><td>Violett-Weiß → Weiß</td><td>Einspritzimpulse</td></tr>
+</table>
+
+<h2 id="fehler">3. Fehler- &amp; Lückenliste</h2>
+<table>
+<tr><th>ID</th><th>Schwere</th><th>Befund (Beleg per Direkt-Read)</th><th>Fix</th></tr>
+<tr><td>F1</td><td><span class="badge krit">KRITISCH</span></td><td>Eingebettete Arduino-Firmware auf der Live-Seite = alte Bug-Version: <code>RISING</code> 1×, kein <code>FALLING</code>, kein EEPROM, kein <code>RPM/SPEED_FACTOR_MAX</code>, float-FAKTOR als Konstante. Zusatzmängel: Ausgang toggelt nur bei neuem Puls ( friert zwischen Pulsen ein), <code>Serial</code> immer an, keine Bereichsprüfung, Timeout 500 ms starr. Die gefixte Firmware v1.0 liegt nur im privaten Repo.</td><td>Gefixte Firmware (FALLING, EEPROM, MAX-Konstanten) ins Public-Repo portieren + Kompilat-Beleg.</td></tr>
+<tr><td>F2</td><td><span class="badge hoch">HOCH</span></td><td>GALA-Anleitung Schritt 3+4: Signal → T28/27 <strong>und parallel direkt an ECU Pin 65</strong>. T28/07- und ECU65-Hinweise sagen dagegen: ECU bekommt das Signal <strong>von T28/07 über U2/02</strong> (Tacho verstärkt/formt). Doppelpfad = Widerspruch, mögliche Masseschleife/Doppeleinspeisung.</td><td>Entscheiden + eindeutig dokumentieren: Standard = T28/07-Pfad; Parallel-Abgriff nur als (begründete) Ausnahme.</td></tr>
+<tr><td>F3</td><td><span class="badge hoch">HOCH</span></td><td>Arduino Schritt 3: „ABS G47 Pin 1 (Braun/Weiß) → GND". G47 hat keinen Pin 1 – gemeint ist ABS-SG Pin 23 (Rückleitung, eigene Sensortabelle belegt: Braun→SG-Pin 5, Braun-Weiß→SG-Pin 23). Falsche Nummerierung + „→ GND" statt Differenzial-Rückleitung.</td><td>Korrigieren: Braun-Weiß → SG Pin 23-Potenzial weiterführen, hochohmig abgreifen, nicht auf Masse legen.</td></tr>
+<tr><td>F4</td><td><span class="badge hoch">HOCH</span></td><td>PC817-Optokoppler steht als „Pflicht" im Text, die Verdrahtung beschreibt aber BC547 direkt am Bordnetz (12V-Pull-up) ohne Optokoppler-Verdrahtung.</td><td>Optokoppler in die Schritt-Verdrahtung einzeichnen (Arduino → PC817 → BC547 → 12V-Seite), Trennstellen markieren.</td></tr>
+<tr><td>F5</td><td><span class="badge mittel">MITTEL</span></td><td>README verweist auf <code>db/vw-wissen2.db</code> + SQL-Dump – im Public-HEAD nicht vorhanden (Privacy-Umzug <code>a6b9e33</code>).</td><td>README korrigieren (Verweis auf privates Repo oder entfernen).</td></tr>
+<tr><td>F6</td><td><span class="badge mittel">MITTEL</span></td><td><code>mermaid.mermaid</code> (Prototyp-Loop) und <code>mindmap*.txt</code> (XDF-Strategie) sind themenfremd/fehlplatziert.</td><td>Ersetzen: VSS-Flussdiagramm (Mermaid) + echte Verdrahtungs-Notizen.</td></tr>
+<tr><td>F7</td><td><span class="badge krit">KRITISCH</span></td><td><code>v0.1.final.html</code> = Stub (s. Bestand). Als „Release with bug fixes" getaggt – täuscht Funktionsfähigkeit vor.</td><td>Datei entfernen oder als DEFEKT kennzeichnen, bis parse/save/checksum wieder drin + getestet.</td></tr>
+<tr><td>F8</td><td><span class="badge hoch">HOCH</span></td><td><code>v0.1.html</code>: B1 <code>readBytesSafe</code> ohne Integer-Guard (liest ab Offset 0 statt zu failen); B3 Checksumme hart <code>0xFFFE</code>/Bereich <code>0x8000–0xFFFF</code> (XDF kennt auch <code>0xFFFD</code>); B4 Endianness fest Little-Endian; B6 <code>detectXDF</code> wählt still Index 0 (falsche XDF = alle Adressen falsch); B8 XDF-Titel unescapet in <code>innerHTML</code> + Adress-Bounds fehlen. (Detailaudit per Direkt-Read, B2/B5/B7 mittel.)</td><td>P0-Fixliste s. Abschnitt 5 (Checksumme aus XDF auflösen, Mindest-Score + Unbekannt-Modus, Guards).</td></tr>
+<tr><td>F9</td><td><span class="badge hoch">HOCH</span></td><td>Mk04 (T55) + Mk20 (T25): 59 Pins mit Kabel „unbestätigt" (64× Wort-Treffer). Größte offene Lücke; G44–G47-Adern am SG unbelegt.</td><td>Per Bentley Nr. 33–35 + Multimeter/K-Line-Test verifizieren, erst dann aus „unbestätigt" heben.</td></tr>
+<tr><td>F10</td><td><span class="badge luecke">LÜCKE</span></td><td>W/1-Farbwechsel (Blau-Weiß → Weiß-Gelb) dokumentiert, aber Radio-Abzweig an W/1 fehlt in der Kette; W/3 (Schwarz-Gelb, X-Kontakt) vs. Schaltplan-D7-Warnung nur als Achtung notiert.</td><td>Radio-Abzweig einzeichnen; W/1-vs-W/3-Verwechslungsschutz (Foto/Label) ergänzen.</td></tr>
+<tr><td>F11</td><td><span class="badge luecke">LÜCKE</span></td><td>k=960 / 4 Imp./U / 107 Hz rechnerisch konsistent (3840 Imp./km), aber W=960 ab Werk unbelegt (Serie 935/950) und „4 Imp./U" ohne Primärquelle.</td><td>Als Annahme kennzeichnen + Verifikationsauftrag (Tacho-Aufdruck, GPS-/Oszi-Gegenmessung).</td></tr>
+<tr><td>F12</td><td><span class="badge mittel">MITTEL</span></td><td>PDF-Export (04.09.) älter als v3 (10.09.) – vermutlich veraltet.</td><td>PDF nach Fixes neu exportieren.</td></tr>
+<tr><td>F13</td><td><span class="badge hoch">HOCH</span></td><td>Fehlende Sicherheitsvorgaben: 7805→5V-Pin ohne Sicherung/Verpolschutz; kein Wort zu ABS-Fehlereintrag/Warnlampe beim Abgriff; keine Entkopplungsvorgabe (hochohmig, verdrillt lassen).</td><td>Failsafe-Plan (Abschnitt 6) in die Anleitung übernehmen.</td></tr>
+</table>
+
+<h2 id="wissen">4. Wissensbeschaffung (Web, mit Quelle + Konfidenz)</h2>
+<table>
+<tr><th>Thema</th><th>Verifizierter Fakt</th><th>Quelle</th><th>Konf.</th></tr>
+<tr><td>02A-Getriebe</td><td>Mechanischer Tachowellen-Antrieb vorhanden/nachrüstbar (Tachowellen als Swap-Zubehör; frühe 02A haben das Zahnrad, neuere nehmen elektronischen Mk3-VSS G22 / 191 919 149 A).</td><td class="quelle">tech-53.com, s-pautomotive.com, vwvortex.com (4997442, 4391222)</td><td><span class="badge ok">HOCH</span></td></tr>
+<tr><td>GALA 321 907 345 B</td><td>Sitzt an der Tacho-Rückseite (Welleneingang), 3-pol.: 12V / Ausgang / Masse; Ausgang ws/ge Richtung Radio-GALA/GRA. Signalweg Serie: Tacho Pin 7 → U2/2 → W/1.</td><td class="quelle">golf1.info-Forum, golf1wiki.de, doppel-wobber.de, wolfsburg-edition.info (117948), a2resource.com/CE2cluster</td><td><span class="badge ok">HOCH</span></td></tr>
+<tr><td>T28/07 vs T28/27</td><td>T28/27 = VSS-Eingang (KI-seitig verstärkt), T28/07 = Ausgang (violett → U2/02). „Muss über T28/07" als Bauanweisung bestätigt (KI verstärkt).</td><td class="quelle">a2resource.com, wolfsburg-edition.info</td><td><span class="badge ok">HOCH</span></td></tr>
+<tr><td>k=960-Rechnung</td><td>960 U/km × 4 = 3840 Imp./km → 106,7 Hz @100 km/h ✓. Aber: k=960 muss Umdrehungen/km sein (sonst 26,7 Hz); Serie 935/950.</td><td class="quelle">de.wikipedia.org/wiki/Wegimpulszahl, t4-wiki.de, golf2forum.de</td><td><span class="badge mittel">MITTEL</span></td></tr>
+<tr><td>Mk20 ZE-Seite</td><td>W/2 (gr/ws) = Warnlampe → SG-Pin 16; W/3 (sw/ge) = X-Kontakt; W/4 (sw/ro) = Bremslicht → SG-Pin 12.</td><td class="quelle">motor-talk.de (t5500071), wolfsburg-edition.info (87195)</td><td><span class="badge mittel">MITTEL</span></td></tr>
+<tr><td>Mk04-Stecker</td><td>Nur belegt: grüner 6-pol. Stecker zum Sicherungskasten (3 belegt); Belegung unbeantwortet.</td><td class="quelle">doppel-wobber.de (50063), scribd Teves-04/20, workshop-manuals.com</td><td><span class="badge luecke">LÜCKE</span></td></tr>
+<tr><td>Kein VSS vom ABS-SG</td><td>Mk04/Mk20 haben keinen fahrzeugseitigen VSS-/GALA-Ausgang (G22 hängt direkt am KI; VSS-vom-ABS erst mit CAN).</td><td class="quelle">wiki.a2-freun.de (G22), wolfsburg-edition.info (117948)</td><td><span class="badge ok">MITTEL-HOCH</span></td></tr>
+<tr><td>Sensorik</td><td>Mk04/Mk20-Ära = passive induktive Geber; aktive = 2-Leiter.</td><td class="quelle">hella.com/techworld</td><td><span class="badge ok">HOCH</span></td></tr>
+<tr><td>M2.9.1 AAA</td><td>Pin 65 VSS Blau-Weiß ✓ · Pin 22 DZM Grün-Schwarz · Pin 51 MFA Violett-Weiß · Pin 43 K-Line Grau-Weiß · Pin 21 L-Line Gelb · Pin 67/68 Drehzahlgeber.</td><td class="quelle">a2resource.com (motronicvr6aba), vwvortex.com (9459586), montecarlomagic (Golf-III-T28)</td><td><span class="badge ok">HOCH</span></td></tr>
+<tr><td>DZM 6→4</td><td>Zwei Stufen: Frequenzteiler ×2/3 (6:4) + Zündsignalsimulator (Kl.-1-Signal, z. B. ZMM); Alternative: Tacho-Umbau (BBG).</td><td class="quelle">vr6forum.eu (t9765), doppel-wobber.de (73443), vr6-info.de</td><td><span class="badge mittel">MITTEL-HOCH</span></td></tr>
+</table>
+<p class="quelle">Recherche-Rohdaten (Such-JSONs, Pinout-Texte, T28-PDF, Thread-HTMLs) gecacht unter <code>C:\Users\Admin\vr6_research\</code>. Blocker dabei: web_extract defekt, motor-talk/vr6forum JS-Walls (per curl/Snippets kompensiert); G44–G47-Adern am SG ohne Quelle (NIEDRIG).</p>
+
+<h2 id="umsetzung">5. Umsetzungsplan (Schritt für Schritt)</h2>
+<table>
+<tr><th>Schritt</th><th>Was</th><th>Fertig wenn</th></tr>
+<tr><td>0 – Stopp-Regeln</td><td>Failsafe (Abschnitt 6) gilt ab sofort für jede Arbeit am Fahrzeug/ABS/SG.</td><td>Checkliste ausgedruckt/befolgt</td></tr>
+<tr><td>1 – Doku-Fixes (klein, sofort)</td><td>README-db-Verweis fixen (F5) · GALA-Doppelpfad entscheiden (F2) · G47-Pin korrigieren (F3) · Optokoppler-Verdrahtung einzeichnen (F4) · k=960 als Annahme kennzeichnen (F11) · Radio-Abzweig W/1 ergänzen (F10)</td><td>Diff auf <code>index.html</code> reviewed</td></tr>
+<tr><td>2 – Mk04/Mk20 verifizieren</td><td>Bentley Nr. 33–35 gegen 59 „unbestätigt"-Pins prüfen; Multimeter (1 kΩ, verdrillte Paare), K-Line-/Warnlampen-Test; G44–G47-Adern belegen (F9)</td><td>0× „unbestätigt" ohne Quellenvermerk</td></tr>
+<tr><td>3 – Firmware portieren</td><td>Gefixte v1.0 (FALLING/EEPROM/MAX) aus privatem Repo nach public; Kompilat-Beleg (Nano, Größe/RAM); GPS-/Oszi-Gegenmessung 107 Hz (F1, F11)</td><td>Kompiliert + Messprotokoll</td></tr>
+<tr><td>4 – Signalpfad-Menü bauen</td><td>Konzept Abschnitt 7 umsetzen (VSS-/DZM-Tracer, Checklisten-Modus)</td><td>Klick T28/27 → Kette highlightet, mobil bedienbar</td></tr>
+<tr><td>5 – XDF-Tools sanieren</td><td><code>v0.1.final.html</code> entfernen/als defekt kennzeichnen (F7); <code>v0.1.html</code> P0: Checksumme aus XDF auflösen (0xFFFE vs 0xFFFD + BinSize-Check), <code>detectXDF</code>-Mindestscore + Unbekannt-Modus (kein Edit/Save), Integer-/Bounds-Guards, Endianness aus Flags (F8)</td><td>Kein Save-Pfad ohne valide Checksumme möglich</td></tr>
+<tr><td>6 – Aufräumen &amp; Release</td><td>Mermaid→VSS-Diagramm, Mindmaps ersetzen/archivieren (F6); PDF neu exportieren (F12); Release-Tag + Pages-Kontrolle (F12 aus c5c9cb8 prüfen)</td><td>Pages = getaggter Stand, PDF aktuell</td></tr>
+</table>
+
+<h2 id="failsafe">6. Failsafe-Plan (feste Reihenfolge, keine Abkürzung)</h2>
+<div class="kritbox"><strong>Heißeste Drähte zuerst:</strong> Batterie ab bei Steckerarbeiten · Kl.15-Abgriffe nur über Sicherung · Verpolungsschutz am 7805 (Diode) · 5V-Einspeisung nie parallel zu USB · ABS-Sensorleitungen niemals durchtrennen (nur hochohmig abgreifen, verdrillt lassen) · Optokoppler PC817 Pflicht zwischen Arduino- und 12V-Seite · kein BIN-Flash ohne Checksummen-Verify (P0.1/P0.2) · nach jedem Eingriff: ABS-Lampe, Tacho (GPS-Gegenmessung), ECU-Messblock Gruppe 3 (VSS), Leerlauf/Schubabschaltung prüfen · Rückbauweg freihalten (Original-SG-Pins/-Kabel dokumentieren, keine irreversiblen Schnitte).</div>
+<ol>
+<li><strong>Strom:</strong> Abgriff Kl.15 (U1/04, Si.16) nur mit eigener Sicherung; Masse sternförmig an Karosserie; 7805 mit Kühlkörper + Diode.</li>
+<li><strong>Signal-Abgriff ABS:</strong> hochohmig (LM393-Eingang), Differenzialpaar erhalten (Braun-Weiß NICHT auf Masse), Fehlerspeicher nach Probefahrt lesen.</li>
+<li><strong>Tacho/ECU:</strong> T28/27-Eingang nie mit 12V direkt treiben (Open-Collector/Opto); T28/07-Ausgang nicht rückspeisen; ECU Pin 65 nur aus EINER Quelle (F2-Entscheidung).</li>
+<li><strong>Firmware:</strong> nur gefixte v1.0; FAKTOR per GPS kalibrieren; Timeout-Verhalten (Ausgang LOW bei Signalverlust) am Bench testen.</li>
+<li><strong>XDF/BIN:</strong> Original-BIN sichern + Checksumme notieren; kein Flash aus <code>v0.1.final.html</code>; Save-Button bis P0-Fix deaktiviert.</li>
+<li><strong>Abnahme:</strong> VSS-Kette Station 1→6b durchmessen (Durchgang + Farbe je Station), Probefahrt-Protokoll (Tacho vs. GPS vs. Messblock), ABS-Funktion auf griffigem Belag testen.</li>
+</ol>
+
+<h2 id="menue">7. Menü- &amp; Steuerungskonzept (vernünftig, nachvollziehbar)</h2>
+<p>Beibehalten: Tabs (ZE2 / Sicherungen &amp; Relais / Tacho T28 / ECU AAA / ABS), Suche (<code>/</code> fokussiert, <code>Esc</code> leert), Kategorie-Filter. Neu:</p>
+<ul>
+<li><strong>Tab „Signalpfad" (VSS-Tracer):</strong> Quelle wählen (GALA / Arduino / 02A-Welle) → Kette als Breadcrumb <em>Geber → G1/11 → U1/11 → T28/27 → Tacho → T28/07 → U2/02 → ECU65/Tempomat/Radio</em>; jede Station klickbar (springt zur Pin-Tabelle); aktive Kette wird in allen Tabs gehighlightet.</li>
+<li><strong>DZM-Tracer + MFA-Tracer</strong> analog (Pin 22→T28/10 inkl. Wandler-Hinweis; Pin 51→T28/26).</li>
+<li><strong>Checklisten-Modus:</strong> jede VSS-Station (Tabelle Abschnitt 2) mit Abhakbox + Sollwerten (Farbe, Frequenz, Widerstand); Fortschritt gespeichert (localStorage).</li>
+<li><strong>Warnbadges:</strong> <span class="badge krit">UNBESTÄTIGT</span> an allen Mk04/Mk20-Pins; <span class="badge hoch">ANNAHME</span> an k=960/4 Imp.; <span class="badge krit">DEFEKT</span> am XDF-final-Eintrag.</li>
+<li><strong>Firmware-Box:</strong> gefixte v1.0 mit Kopieren-Button + FAKTOR-Rechner (Reifen + Zähne → FAKTOR) + Kalibrier-Hinweis.</li>
+<li><strong>Steuerung:</strong> Tastatur (<code>/</code> Suche, <code>1–6</code> Tabs, <code>Esc</code> zurück), mobil: Breadcrumb horizontal scrollbar, Tabellen mit sticky erster Spalte.</li>
+</ul>
+<pre>Mockup (Startseite):
+┌─────────────────────────────────────────────────┐
+│ Golf 2 VR6 · Pinout-Referenz        [Suche: /]  │
+│ [ZE2][Sicherungen][Tacho][ECU][ABS][SIGNALPFAD] │
+│                                                 │
+│ SIGNALPFAD: [VSS: (•)GALA ( )Arduino] [DZM] [MFA]│
+│  Geber→G1/11→U1/11→T28/27→Tacho→T28/07→ECU65    │
+│  [✓1 Geber][✓2 G1/11][ 3 U1/11]…  Fortschritt 2/8│
+│  ⚠ Mk04/Mk20-Pins UNBESTÄTIGT · k=960 = ANNAHME  │
+└─────────────────────────────────────────────────┘</pre>
+
+<footer>Erstellt 12.09.2026 · Quellen: Direkt-Read des Repo-Clone (HEAD <code>c5c9cb8</code>), A2Resource, Wolfsburg-Edition, Doppel-WOBber, Hella, Wikipedia, Motor-Talk, vr6forum/vagboard, Hella Techworld. Alle Angaben ohne Gewähr – vor Verdrahtung/Flash gegenmessen (Failsafe). Offen: Mk04/Mk20-SG-Pins (59×), k=960-Prägung am Tacho, Pages-Filter-Check (c5c9cb8).</footer>
+</main>
+</body>
+</html>
