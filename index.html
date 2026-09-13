@@ -491,43 +491,7 @@ function pinZeile(s, p) {
     '</td><td>' + kabelZelle(p.kabelfarbe) + '</td><td>' + ziel + '</td><td class="mut small">' + esc(hw || '–') +
     '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
 }
-/* Flache v3-Tabelle für Tacho/ECU/ABS & Co (nur ZE2 bekommt Akkordeons) */
-function sgTabelleFlach(s) {
-  var alle = SG_DATEN.pinouts.filter(function (p) { return p.steuergeraet_id === s.id; });
-  var kats = [];
-  alle.forEach(function (p) { if (p.kategorie && kats.indexOf(p.kategorie) < 0) kats.push(p.kategorie); });
-  var kat = state.subKat || 'alle';
-  var h = '';
-  if (kats.length) {
-    h += '<div class="kats"><button class="kat-btn' + (kat === 'alle' ? ' active' : '') + '" data-kat="alle">Alle</button>';
-    kats.forEach(function (k) { h += '<button class="kat-btn' + (kat === k ? ' active' : '') + '" data-kat="' + esc(k) + '">' + esc(k) + '</button>'; });
-    h += '</div>';
-  }
-  var pins = alle.filter(function (p) {
-    if (kat !== 'alle' && p.kategorie !== kat) return false;
-    return matchQ(p.pin + ' ' + p.funktion + ' ' + (p.kabelfarbe || '') + ' ' + (p.hinweis || '') + ' ' + s.name);
-  });
-  h += '<h2>' + esc(s.name) + ' <span class="mut small">' + pins.length + ' von ' + alle.length + ' Pins' + (s.stecker ? ' · ' + esc(s.stecker) : '') + '</span></h2>';
-  if (s.teilenummern) h += '<div class="mut small">' + esc(s.teilenummern) + '</div>';
-  if (!pins.length) return h + '<div class="empty">Keine Treffer.</div>';
-  h += '<table class="pins"><tr><th>Pin</th><th>Funktion</th><th>Kabel</th>' + (kats.length ? '<th>Kategorie</th>' : '') + '<th>Verbunden mit</th><th>Hinweis</th><th></th></tr>';
-  pins.forEach(function (p) {
-    var kn = sgPinZuKnoten(s.id, p.pin);
-    var nb = kn ? nachbarn(kn) : [];
-    var ziel = nb.length ? nb.slice(0, 5).map(nodeLink).join(' ') + (nb.length > 5 ? ' <span class="mut small">+' + (nb.length - 5) + '</span>' : '') : '–';
-    var hw = hinweisSauber(p.hinweis);
-    var warn = safetyMark(p) ? ' warn-bar' : '';
-    var dim = (!p.kabelfarbe || p.kabelfarbe === '–' || /^unbelegt$/i.test(p.kabelfarbe || '')) && !safetyMark(p) ? ' dim-row' : '';
-    var copy = (s.name + ' ' + p.pin + ': ' + p.funktion + (p.kabelfarbe && p.kabelfarbe !== '–' ? ' (' + p.kabelfarbe + ')' : '')).replace(/"/g, '&quot;');
-    h += '<tr class="copy-row' + warn + dim + '"><td>' + (kn ? nodeLink(kn) : esc(p.pin)) + '</td><td>' + esc(p.funktion) + safetyMark(p) +
-      '</td><td>' + kabelZelle(p.kabelfarbe) + '</td>' + (kats.length ? '<td class="mut small">' + esc(p.kategorie || '–') + '</td>' : '') +
-      '<td>' + ziel + '</td><td class="mut small">' + esc(hw || '–') +
-      '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
-  });
-  return h + '</table>';
-}
 function sgTabHtml(s) {
-  if (s.id !== 27) return sgTabelleFlach(s);
   var alle = SG_DATEN.pinouts.filter(function (p) { return p.steuergeraet_id === s.id; });
   var kats = [];
   alle.forEach(function (p) { if (p.kategorie && kats.indexOf(p.kategorie) < 0) kats.push(p.kategorie); });
@@ -557,7 +521,7 @@ function sgTabHtml(s) {
     '<button class="kat-btn" data-allopen>Alle aufklappen</button>' +
     '<button class="kat-btn" data-allshut>Alle zuklappen</button></div>';
   h += '<div class="side-cols">';
-  if (conns.length > 1) {
+  {
     h += '<div class="sidebar">';
     connGruppen(s, conns).forEach(function (g) {
       h += '<div class="side-grp">' + esc(g.label) + '</div>';
@@ -581,11 +545,11 @@ function sgTabHtml(s) {
     var pins = connPins(c);
     if (!pins.length) return;
     var key = (state.sub || '') + '|' + c;
-    var offen = sucht || conn !== 'alle' || state.open[key];
-    var m = connMeta(c);
-    var st = m ? farbeStyle(m.farbe) : { bg: '#27272a', fg: '#a1a1aa' };
-    var name = m ? m.beschreibung : (c === '–' ? 'Sonstige Pins' : 'Stecker ' + c);
-    var det = m ? esc(m.farbe) + ' · ' + m.pole + '-polig' : '';
+    var offen = sucht || conn !== 'alle' || state.open[key] || sichtConns.length === 1;
+    var m = connMeta(c) || { farbe: 'Grau', pole: pins.length, beschreibung: s.name };
+    var st = farbeStyle(m.farbe);
+    var name = (s.id === 27 && connMeta(c)) ? m.beschreibung : (s.id === 27 ? (c === '–' ? 'Sonstige Pins' : 'Stecker ' + c) : m.beschreibung);
+    var det = (s.id === 27 && connMeta(c)) ? esc(m.farbe) + ' · ' + m.pole + '-polig' : esc(String(pins.length)) + ' Pins' + (s.stecker ? ' · ' + esc(s.stecker) : '');
     h += '<button class="conn-header" data-toggle="' + esc(c) + '">' +
       '<span class="conn-badge" style="background:' + st.bg + ';color:' + st.fg + '">' + esc(c) + '</span>' +
       '<strong>' + esc(name) + '</strong>' + (det ? '<span class="mut small">' + det + '</span>' : '') +
