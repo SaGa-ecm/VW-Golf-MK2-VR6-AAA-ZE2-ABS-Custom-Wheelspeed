@@ -160,4 +160,9 @@ ok('Wizard 1-2-3-4', () => {
   assert(scripts[0].includes('FAHRZEUG_GRUPPEN'), 'FAHRZEUG_GRUPPEN fehlt');
 });
 
+// 12) Ergebnis in v3-Ordnung: Reiter pro Baugruppe + Sidebar + Ziel-Spalte
+ok('Ergebnis v3-Ordnung', () => {
+  for (const s of ['ZE2 Stecker', 'Tacho T28', 'Sicherungen & Relais', 'Signalpfad', 'Alle Stecker', 'Verbunden mit', 'VSS-Lösung']) assert(scripts[1].includes(s), s + ' fehlt');
+});
+
 console.log('\nALLE ' + pass + ' CHECKS BESTANDEN');
