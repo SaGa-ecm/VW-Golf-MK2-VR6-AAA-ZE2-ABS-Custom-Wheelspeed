@@ -84,6 +84,8 @@ const css = '*{box-sizing:border-box}body{margin:0;background:#0D0D0D;color:#E8E
 + 'tr.warn-bar{background:rgba(245,158,11,.05)}tr.dim-row{opacity:.5}'
 + '.side-grp{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#E8A020;margin:10px 0 2px;font-weight:700}'
 + '.side-main{flex:1;min-width:0}'
++ '.side-kurz{font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
++ '.sidebar-btn.active .side-kurz{color:rgba(232,160,32,.8)}'
 + '.tab-btn.disabled{opacity:.35;cursor:default}'
 + '.mut{color:#888}.small{font-size:12px}.warn{color:#f59e0b;font-size:12px}'
 + '.src{font-size:10px;color:#555;margin-top:3px}.hint{background:#141414;border:1px solid #2a2a2a;border-radius:4px;padding:8px 12px;font-size:12px;color:#999;margin-top:12px}'

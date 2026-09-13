@@ -235,7 +235,43 @@ function pinZeile(s, p) {
     '</td><td>' + kabelZelle(p.kabelfarbe) + '</td><td>' + ziel + '</td><td class="mut small">' + esc(hw || '–') +
     '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
 }
+/* Flache v3-Tabelle für Tacho/ECU/ABS & Co (nur ZE2 bekommt Akkordeons) */
+function sgTabelleFlach(s) {
+  var alle = SG_DATEN.pinouts.filter(function (p) { return p.steuergeraet_id === s.id; });
+  var kats = [];
+  alle.forEach(function (p) { if (p.kategorie && kats.indexOf(p.kategorie) < 0) kats.push(p.kategorie); });
+  var kat = state.subKat || 'alle';
+  var h = '';
+  if (kats.length) {
+    h += '<div class="kats"><button class="kat-btn' + (kat === 'alle' ? ' active' : '') + '" data-kat="alle">Alle</button>';
+    kats.forEach(function (k) { h += '<button class="kat-btn' + (kat === k ? ' active' : '') + '" data-kat="' + esc(k) + '">' + esc(k) + '</button>'; });
+    h += '</div>';
+  }
+  var pins = alle.filter(function (p) {
+    if (kat !== 'alle' && p.kategorie !== kat) return false;
+    return matchQ(p.pin + ' ' + p.funktion + ' ' + (p.kabelfarbe || '') + ' ' + (p.hinweis || '') + ' ' + s.name);
+  });
+  h += '<h2>' + esc(s.name) + ' <span class="mut small">' + pins.length + ' von ' + alle.length + ' Pins' + (s.stecker ? ' · ' + esc(s.stecker) : '') + '</span></h2>';
+  if (s.teilenummern) h += '<div class="mut small">' + esc(s.teilenummern) + '</div>';
+  if (!pins.length) return h + '<div class="empty">Keine Treffer.</div>';
+  h += '<table class="pins"><tr><th>Pin</th><th>Funktion</th><th>Kabel</th>' + (kats.length ? '<th>Kategorie</th>' : '') + '<th>Verbunden mit</th><th>Hinweis</th><th></th></tr>';
+  pins.forEach(function (p) {
+    var kn = sgPinZuKnoten(s.id, p.pin);
+    var nb = kn ? nachbarn(kn) : [];
+    var ziel = nb.length ? nb.slice(0, 5).map(nodeLink).join(' ') + (nb.length > 5 ? ' <span class="mut small">+' + (nb.length - 5) + '</span>' : '') : '–';
+    var hw = hinweisSauber(p.hinweis);
+    var warn = safetyMark(p) ? ' warn-bar' : '';
+    var dim = (!p.kabelfarbe || p.kabelfarbe === '–' || /^unbelegt$/i.test(p.kabelfarbe || '')) && !safetyMark(p) ? ' dim-row' : '';
+    var copy = (s.name + ' ' + p.pin + ': ' + p.funktion + (p.kabelfarbe && p.kabelfarbe !== '–' ? ' (' + p.kabelfarbe + ')' : '')).replace(/"/g, '&quot;');
+    h += '<tr class="copy-row' + warn + dim + '"><td>' + (kn ? nodeLink(kn) : esc(p.pin)) + '</td><td>' + esc(p.funktion) + safetyMark(p) +
+      '</td><td>' + kabelZelle(p.kabelfarbe) + '</td>' + (kats.length ? '<td class="mut small">' + esc(p.kategorie || '–') + '</td>' : '') +
+      '<td>' + ziel + '</td><td class="mut small">' + esc(hw || '–') +
+      '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
+  });
+  return h + '</table>';
+}
 function sgTabHtml(s) {
+  if (s.id !== 27) return sgTabelleFlach(s);
   var alle = SG_DATEN.pinouts.filter(function (p) { return p.steuergeraet_id === s.id; });
   var kats = [];
   alle.forEach(function (p) { if (p.kategorie && kats.indexOf(p.kategorie) < 0) kats.push(p.kategorie); });
@@ -273,8 +309,10 @@ function sgTabHtml(s) {
         var n = alle.filter(function (p) { return connFuerPin(s, p.pin) === c; }).length;
         var mm = connMeta(c);
         var sst = mm ? farbeStyle(mm.farbe) : { bg: '#27272a', fg: '#a1a1aa' };
+        var kurz = mm ? mm.beschreibung.split(' ')[0] : c;
+        var pol = mm ? ' <small>' + mm.pole + 'p</small>' : ' <small>' + n + '</small>';
         h += '<button class="sidebar-btn' + (conn === c ? ' active' : '') + '" data-conn="' + esc(c) + '">' +
-          '<span class="kbadge" style="background:' + sst.bg + ';color:' + sst.fg + '">' + esc(c) + '</span> <small>' + n + '</small></button>';
+          '<span class="kbadge" style="background:' + sst.bg + ';color:' + sst.fg + '">' + esc(c) + '</span><span class="side-kurz">' + esc(kurz) + '</span>' + pol + '</button>';
       });
     });
     h += '</div>';
@@ -430,7 +468,7 @@ function renderErgebnis() {
     b.onclick = function () { state.sub = b.dataset.sub; state.subKat = 'alle'; state.subConn = 'alle'; speichern(); render(); };
   });
   mainEl.querySelectorAll('[data-kat]').forEach(function (b) { b.onclick = function () { state.subKat = b.dataset.kat; speichern(); render(); }; });
-  mainEl.querySelectorAll('[data-conn]').forEach(function (b) { b.onclick = function () { state.subConn = b.dataset.conn; speichern(); render(); }; });
+  mainEl.querySelectorAll('[data-conn]').forEach(function (b) { b.onclick = function () { state.subConn = (state.subConn === b.dataset.conn) ? 'alle' : b.dataset.conn; speichern(); render(); }; });
   if (!state.open) state.open = {};
   mainEl.querySelectorAll('[data-toggle]').forEach(function (b) {
     b.onclick = function () { var key = (state.sub || '') + '|' + b.dataset.toggle; state.open[key] = !state.open[key]; speichern(); render(); };
