@@ -174,6 +174,7 @@ ok('Ergebnis v3-Ordnung', () => {
   for (const s of ['ZE2 Stecker', 'Tacho T28', 'Sicherungen & Relais', 'Signalpfad', 'Alle Stecker', 'Alle aufklappen', 'Verbunden mit', 'Hinweis', 'VSS-Lösung']) assert(scripts[1].includes(s), s + ' fehlt');
   for (const s of ['Scheinwerfer', 'Lenksäule', 'Scheinwerferkabelbaum links']) assert(scripts[0].includes(s), s + ' fehlt (App)');
   for (const s of ['ABS System', 'ABS-Varianten', 'Schlüsselknoten', 'HERKUNFT', 'Sicherungen (', 'fuse-amp']) assert(scripts[1].includes(s), s + ' fehlt (UI)');
+  for (const s of ['Welche Frage hast du?', 'Tacho zeigt nichts', 'Tachosignal', 'Signalweg in Worten', 'woher kommt das Signal', 'aria-expanded', 'aria-label']) assert(scripts[1].includes(s), s + ' fehlt (Pfad UX)');
 });
 
 console.log('\nALLE ' + pass + ' CHECKS BESTANDEN');

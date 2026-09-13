@@ -34,7 +34,7 @@ const css = '*{box-sizing:border-box}body{margin:0;background:#0D0D0D;color:#E8E
 + 'a{color:#E8A020}.wrap{max-width:1100px;margin:0 auto;padding:16px 14px 60px}'
 + 'header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}header h1{font-size:18px;margin:0;color:#E8A020}'
 + '.tabs{display:flex;gap:2px;border-bottom:1px solid #222;margin:12px 0;overflow-x:auto}'
-+ '.tab-btn{background:none;border:none;cursor:pointer;padding:9px 12px;font-size:12px;font-weight:600;white-space:nowrap;color:#555;border-bottom:2px solid transparent}'
++ '.tab-btn{background:none;border:none;cursor:pointer;padding:9px 12px;font-size:12px;font-weight:600;white-space:nowrap;color:#888;border-bottom:2px solid transparent}'
 + '.tab-btn.active{color:#E8A020;border-bottom-color:#E8A020}.tab-btn:not(.active):hover{color:#999}'
 + '.badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:3px;margin:2px 4px 2px 0}'
 + '.b-pins{background:rgba(20,83,45,.4);color:#86efac;border:1px solid rgba(20,83,45,.8)}'
@@ -46,7 +46,10 @@ const css = '*{box-sizing:border-box}body{margin:0;background:#0D0D0D;color:#E8E
 + '.warn-annahme{background:rgba(232,160,32,.12);color:#E8A020;border:1px solid rgba(232,160,32,.5)}'
 + '.searchrow{position:relative;margin-bottom:10px}.searchrow input{background:#141414;border:1px solid #2a2a2a;color:#E8E8E8;font-size:14px;padding:8px 10px 8px 32px;border-radius:3px;width:100%}'
 + 'input[type=text],input[type=number],input[type=search]{background:#141414;border:1px solid #2a2a2a;color:#E8E8E8;font-size:14px;padding:8px 10px;border-radius:3px;width:100%}'
-+ 'input:focus{outline:none;border-color:rgba(232,160,32,.6)}.searchrow .icon{position:absolute;left:10px;top:9px;color:#444}'
++ 'input:focus{outline:2px solid rgba(232,160,32,.7);outline-offset:1px;border-color:rgba(232,160,32,.6)}.searchrow .icon{position:absolute;left:10px;top:9px;color:#888}'
++ ':focus-visible{outline:2px solid #E8A020;outline-offset:2px}'
++ 'button{min-height:28px}'
++ '.copy-btn{min-width:28px;min-height:28px}'
 + '.kats{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}'
 + '.kat-btn{background:#161616;border:1px solid #2a2a2a;color:#999;font-size:12px;font-weight:600;padding:5px 12px;border-radius:3px;cursor:pointer}'
 + '.kat-btn small{color:#555;font-weight:400}.kat-btn.active{background:#E8A020;color:#0D0D0D;border-color:#E8A020}.kat-btn.active small{color:#0D0D0D}'
@@ -56,7 +59,7 @@ const css = '*{box-sizing:border-box}body{margin:0;background:#0D0D0D;color:#E8E
 + '.detail{flex:1;min-width:0;background:#111;border:1px solid #222;border-radius:5px;padding:16px}.detail h2{margin:0 0 4px;font-size:16px;color:#E8A020}'
 + '.card{background:#111;border:1px solid #222;border-radius:5px;padding:14px;margin:12px 0}.card h2{margin:0 0 8px;font-size:15px;color:#E8A020}.card h3{font-size:13px;color:#E8A020;margin:14px 0 6px}'
 + '.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 10px;font-size:13px;margin:10px 0}.kv dt{color:#777}.kv dd{margin:0;font-family:ui-monospace,monospace;font-size:12px}'
-+ 'table.pins{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}table.pins th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#555;text-align:left;padding:5px 7px;border-bottom:1px solid #2a2a2a}'
++ 'table.pins th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#888;text-align:left;padding:5px 7px;border-bottom:1px solid #2a2a2a}'
 + 'table.pins td{padding:5px 7px;border-bottom:1px solid #1a1a1a;font-family:ui-monospace,monospace;vertical-align:top}'
 + '.mono{font-family:ui-monospace,monospace;font-size:12px;background:#0f0f0f;border:1px solid #222;border-radius:4px;padding:8px 10px;margin-top:6px}'
 + '.kbd{font-family:ui-monospace,monospace;font-size:11px;background:#1c1c1c;border:1px solid #333;border-radius:3px;padding:1px 6px;color:#999}'
@@ -76,14 +79,14 @@ const css = '*{box-sizing:border-box}body{margin:0;background:#0D0D0D;color:#E8E
 + '.conn-header:hover{background:#181818}'
 + '.conn-badge{display:inline-block;min-width:34px;text-align:center;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;font-family:ui-monospace,monospace}'
 + '.conn-header strong{font-size:13px}'
-+ '.conn-count{margin-left:auto;color:#555;font-family:ui-monospace,monospace;font-size:12px}'
-+ '.chev{color:#555;font-size:12px;margin-left:8px}'
++ '.conn-count{margin-left:auto;color:#888;font-family:ui-monospace,monospace;font-size:12px}'
++ '.chev{color:#888;font-size:12px;margin-left:8px}'
 + '.kbadge{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:3px;margin:1px 3px 1px 0;font-family:ui-monospace,monospace}'
-+ '.copy-btn{background:none;border:none;color:#555;cursor:pointer;font-size:13px;opacity:.4;padding:2px 6px}'
++ '.copy-btn{background:none;border:none;color:#999;cursor:pointer;font-size:13px;opacity:.65;padding:2px 6px}'
 + 'tr.copy-row:hover{background:#161616}tr.copy-row:hover .copy-btn{opacity:1;color:#E8A020}'
 + 'tr.warn-bar{background:rgba(245,158,11,.05)}tr.dim-row{opacity:.5}'
 + '.side-grp{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#E8A020;margin:10px 0 2px;font-weight:700}'
-+ '.side-main{flex:1;min-width:0}'
++ '.side-main{flex:1;min-width:0;overflow-x:auto}'
 + '.side-kurz{font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
 + '.sidebar-btn.active .side-kurz{color:rgba(232,160,32,.8)}'
 + '.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}@media(max-width:760px){.grid2{grid-template-columns:1fr}}'
@@ -118,7 +121,7 @@ const html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\
 '<title>VW Golf 2 GTI – Zentrale Pinout-Referenz (ZE2 / T28 / ECU / ABS / VSS)</title>\n<style>' + css + '</style>\n</head>\n<body>\n<div class="wrap">\n' +
 '<header><h1>VW Golf 2 GTI – Zentrale Pinout-Referenz</h1></header>\n' +
 '<nav class="tabs" id="tabs" role="tablist"></nav>\n' +
-'<div class="searchrow"><span class="icon">/</span><input id="q" type="search" placeholder="Globale Suche: System, Pin, Stecker, Farbe …  ( / = Fokus, Esc = zurück )"></div>\n' +
+'<div class="searchrow"><span class="icon" aria-hidden="true">/</span><input id="q" type="search" aria-label="Suche über alle Reiter" placeholder="Globale Suche: System, Pin, Stecker, Farbe …  ( / = Fokus, Esc = zurück )"></div>\n' +
 '<div id="main"></div>\n' +
 '<footer><span id="stat"></span> · Alle Angaben ohne Gewähr – vor Verdrahtung gegenmessen. Tasten: <span class="kbd">1–4</span> Schritte · <span class="kbd">/</span> Suche · <span class="kbd">Esc</span> zurück.</footer>\n' +
 '</div>\n<script>\n' + app + '\n</script>\n<script>\n' + ui + '\n</script>\n</body>\n</html>\n';

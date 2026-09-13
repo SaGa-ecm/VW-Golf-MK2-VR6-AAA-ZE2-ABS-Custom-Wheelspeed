@@ -214,21 +214,38 @@ function kantenTabelle(liste, richtung) {
     var other = richtung === 'up' ? x.e.von : x.e.nach;
     var copy = ((richtung === 'up' ? x.e.von : state.selNode) + ' → ' + (richtung === 'up' ? state.selNode : x.e.nach) + (x.e.signal ? ' (' + x.e.signal + ')' : '')).replace(/"/g, '&quot;');
     h += '<tr class="copy-row"><td>' + nodeLink(other) + '</td><td>' + esc(x.e.signal || '–') +
-      '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
+      '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren" aria-label="Signal kopieren">⧉</button></td></tr>';
   });
   return h + '</table>';
 }
 var SCHLUESSEL = [
-  { id: 'T28/27', label: 'VSS-Eingang' }, { id: 'T28/07', label: 'VSS-Ausgang' },
-  { id: 'U2/02', label: 'VSS-Verteiler' }, { id: 'ECU:65', label: 'VSS an ECU' },
-  { id: 'ECU:22', label: 'Drehzahl' }, { id: 'T28/10', label: 'DZM' },
-  { id: 'ECU:51', label: 'MFA' }, { id: 'T28/26', label: 'MFA-Anzeige' }
+  { gruppe: 'VSS-Weg', id: 'G1/11', label: 'Geber an ZE' }, { gruppe: 'VSS-Weg', id: 'U1/11', label: 'Weiterleitung' },
+  { gruppe: 'VSS-Weg', id: 'T28/27', label: 'Eingang Tacho' }, { gruppe: 'VSS-Weg', id: 'T28/07', label: 'Ausgang Tacho' },
+  { gruppe: 'VSS-Weg', id: 'U2/02', label: 'Verteiler' }, { gruppe: 'VSS-Weg', id: 'ECU:65', label: 'An der ECU' },
+  { gruppe: 'Drehzahl', id: 'ECU:22', label: 'An der ECU' }, { gruppe: 'Drehzahl', id: 'G1/12', label: 'Durch die ZE' },
+  { gruppe: 'Drehzahl', id: 'U1/06', label: 'Weiterleitung' }, { gruppe: 'Drehzahl', id: 'T28/10', label: 'Anzeige' },
+  { gruppe: 'MFA', id: 'ECU:51', label: 'An der ECU' }, { gruppe: 'MFA', id: 'T28/26', label: 'Anzeige' }
 ];
+var FRAGEN = [
+  { id: 'T28/27', titel: 'Tacho zeigt nichts – wo kommt das Signal her?', unter: 'Geber → ZE2 → Tacho → ECU' },
+  { id: 'ECU:22', titel: 'Drehzahlmesser spinnt – wo kommt die Drehzahl her?', unter: 'ECU → ZE2 → Anzeige' },
+  { id: 'ECU:51', titel: 'Bordcomputer ohne Verbrauch – wo kommt das MFA-Signal her?', unter: 'ECU → Anzeige' }
+];
+/* Klarnamen für Schlüsselknoten (Code nur als Zusatz) */
+var KLARNAMEN = {
+  'T28/27': 'Tachosignal – Eingang am Tacho', 'T28/07': 'Tachosignal – Ausgang am Tacho',
+  'U2/02': 'VSS-Verteiler in der ZE', 'ECU:65': 'Tachosignal an der ECU',
+  'G1/11': 'Geber an der ZE', 'U1/11': 'Weiterleitung in der ZE',
+  'ECU:22': 'Drehzahl an der ECU', 'G1/12': 'Drehzahl durch die ZE',
+  'U1/06': 'Drehzahl-Weiterleitung', 'T28/10': 'Drehzahl-Anzeige',
+  'ECU:51': 'Verbrauch an der ECU', 'T28/26': 'Verbrauchs-Anzeige'
+};
+function klarname(id, label) { return KLARNAMEN[id] || (label || id); }
 function pfadSektion(key, titel, count, bodyHtml, defOffen) {
   if (!state.open) state.open = {};
   var o = state.open['pfad|' + key];
   var offen = o === undefined ? !!defOffen : !!o;
-  var h = '<button class="conn-header" data-ptoggle="' + key + '">' +
+  var h = '<button class="conn-header" data-ptoggle="' + key + '" aria-expanded="' + offen + '">' +
     '<span class="conn-badge" style="background:#27272a;color:#E8A020">' + count + '</span>' +
     '<strong>' + esc(titel) + '</strong><span class="chev">' + (offen ? '▾' : '▸') + '</span></button>';
   return h + (offen && bodyHtml ? bodyHtml : '');
@@ -261,9 +278,10 @@ function pinZeile(s, p) {
   var warn = safetyMark(p) ? ' warn-bar' : '';
   var dim = (!p.kabelfarbe || p.kabelfarbe === '–' || /^unbelegt$/i.test(p.kabelfarbe || '')) && !safetyMark(p) ? ' dim-row' : '';
   var copy = (s.name + ' ' + p.pin + ': ' + p.funktion + (p.kabelfarbe && p.kabelfarbe !== '–' ? ' (' + p.kabelfarbe + ')' : '')).replace(/"/g, '&quot;');
+  var alabel = ('Kopieren: ' + s.name + ' Pin ' + p.pin).replace(/"/g, '&quot;');
   return '<tr class="copy-row' + warn + dim + '"><td>' + (kn ? nodeLink(kn) : esc(p.pin)) + '</td><td>' + esc(p.funktion) + safetyMark(p) +
     '</td><td>' + kabelZelle(p.kabelfarbe) + '</td><td>' + ziel + '</td><td class="mut small">' + esc(hw || '–') +
-    '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
+    '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren" aria-label="' + esc(alabel) + '">⧉</button></td></tr>';
 }
 function sgTabHtml(s) {
   var alle = SG_DATEN.pinouts.filter(function (p) { return p.steuergeraet_id === s.id; });
@@ -291,7 +309,7 @@ function sgTabHtml(s) {
   var treffer = 0;
   sichtConns.forEach(function (c) { treffer += connPins(c).length; });
   var sucht = q.value.trim().length > 0;
-  h += '<div class="kats"><button class="kat-btn active">Alle Stecker <small>' + alle.length + '</small></button>' +
+  h += '<div class="kats"><span class="chip">Alle Stecker: ' + alle.length + '</span>' +
     '<button class="kat-btn" data-allopen>Alle aufklappen</button>' +
     '<button class="kat-btn" data-allshut>Alle zuklappen</button></div>';
   h += '<div class="side-cols">';
@@ -324,7 +342,7 @@ function sgTabHtml(s) {
     var st = farbeStyle(m.farbe);
     var name = (s.id === 27 && connMeta(c)) ? m.beschreibung : (s.id === 27 ? (c === '–' ? 'Sonstige Pins' : 'Stecker ' + c) : m.beschreibung);
     var det = (s.id === 27 && connMeta(c)) ? esc(m.farbe) + ' · ' + m.pole + '-polig' : esc(String(pins.length)) + ' Pins' + (s.stecker ? ' · ' + esc(s.stecker) : '');
-    h += '<button class="conn-header" data-toggle="' + esc(c) + '">' +
+    h += '<button class="conn-header" data-toggle="' + esc(c) + '" aria-expanded="' + offen + '">' +
       '<span class="conn-badge" style="background:' + st.bg + ';color:' + st.fg + '">' + esc(c) + '</span>' +
       '<strong>' + esc(name) + '</strong>' + (det ? '<span class="mut small">' + det + '</span>' : '') +
       '<span class="conn-count">' + pins.length + 'P</span><span class="chev">' + (offen ? '▾' : '▸') + '</span></button>';
@@ -371,13 +389,13 @@ function sirelHtml() {
   si.forEach(function (s) {
     var copy = ('Si. ' + s.nr + ' | ' + s.amp + 'A | ' + s.funktion).replace(/"/g, '&quot;');
     h += '<tr class="copy-row"><td>Si. ' + esc(s.nr) + '</td><td>' + ampBadge(s.amp) + '</td><td>' + esc(s.funktion) +
-      '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
+      '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren" aria-label="Kopieren: Sicherung ' + esc(s.nr) + '">⧉</button></td></tr>';
   });
   h += '</table></div><div><h2>Relais (' + rel.length + ')</h2><table class="pins"><tr><th>Nr.</th><th>Funktion</th><th></th></tr>';
   rel.forEach(function (r) {
     var copy = ('Rel. ' + r.nr + ' | ' + r.funktion).replace(/"/g, '&quot;');
     h += '<tr class="copy-row"><td>' + esc(r.nr) + '</td><td>' + esc(r.funktion) +
-      '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
+      '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren" aria-label="Kopieren: Relais ' + esc(r.nr) + '">⧉</button></td></tr>';
   });
   return h + '</table></div></div>';
 }
@@ -385,32 +403,51 @@ function pfadHtml() {
   var adj = buildAdj(GRAPH);
   var treffer = GRAPH.nodes.filter(function (n) { return matchQ(n.id + ' ' + n.label); }).slice(0, 60);
   var h = '<h2>Signalpfad – VSS verfolgen</h2>' +
-    '<p class="mut">HERKUNFT = alle vorgeschalteten Stationen · VERLAUF = alle nachgeschalteten · ZWEIGE = Geschwisterknoten.</p>';
-  h += '<div class="side-cols"><div class="sidebar"><div class="side-grp">Schlüsselknoten</div>';
+    '<p class="mut">HERKUNFT = woher kommt das Signal · VERLAUF = wohin geht es weiter · ZWEIGE = Abzweige zum selben Ziel.</p>';
+  h += '<div class="side-cols"><div class="sidebar">';
+  var grp = null;
   SCHLUESSEL.forEach(function (k) {
+    if (!nodeById(GRAPH, k.id)) return;
+    if (k.gruppe !== grp) { grp = k.gruppe; h += '<div class="side-grp">' + esc(grp) + '</div>'; }
     h += '<button class="sidebar-btn' + (state.selNode === k.id ? ' active' : '') + '" data-node="' + esc(k.id) + '">' +
       '<span class="kbadge" style="background:#27272a;color:#E8A020">' + esc(k.id) + '</span><span class="side-kurz">' + esc(k.label) + '</span></button>';
   });
   h += '</div><div class="side-main">';
-  h += '<div class="crumbs">' + treffer.map(function (n) { return '<button class="crumb' + (state.selNode === n.id ? ' sel' : '') + '" data-node="' + esc(n.id) + '">' + esc(n.id) + '</button>'; }).join('<span class="arrow">·</span>') + '</div>';
-  if (!state.selNode) return h + '<div class="empty">Knoten wählen – z. B. T28/27 (VSS-Eingang), T28/07 (VSS-Ausgang) oder ECU:65.</div></div></div>';
+  var sucht = q.value.trim().length > 0;
+  if (sucht) {
+    h += '<div class="crumbs">' + treffer.map(function (n) { return '<button class="crumb' + (state.selNode === n.id ? ' sel' : '') + '" data-node="' + esc(n.id) + '">' + esc(n.id) + '</button>'; }).join('<span class="arrow">·</span>') + '</div>';
+  }
+  if (!state.selNode) {
+    h += '<div class="card"><h3>Welche Frage hast du?</h3><div class="opts">';
+    FRAGEN.forEach(function (f) {
+      h += '<button class="opt" data-node="' + esc(f.id) + '">' + esc(f.titel) + '<br><span class="mut small">' + esc(f.unter) + '</span></button>';
+    });
+    h += '</div><p class="mut">Oder links einen Schlüsselknoten wählen – oder oben suchen.</p></div>';
+    return h + '</div></div>';
+  }
   var a = pfadAnalyse(GRAPH, state.selNode);
   if (a.fehler) return h + '<div class="empty">' + esc(a.fehler) + '</div></div></div>';
   var d = sgDetailZuKnoten(state.selNode);
-  h += '<h3>' + esc(state.selNode) + ' <span class="mut">' + esc(a.knoten.label || '') + '</span></h3>';
+  h += '<h3>' + esc(klarname(state.selNode, (a.knoten.label || ''))) + ' <span class="mut">(' + esc(state.selNode) + ')</span></h3>';
   if (d) h += '<p>' + esc(d.funktion) + safetyMark(d) + '</p>';
   if (a.intern) h += '<div class="hint">' + badge('Tacho-intern', 'b-annahme') + ' ' + esc(a.intern) + '</div>';
   var upIds = a.herkunft.order.filter(function (x) { return x !== state.selNode; });
   var dnIds = a.verlauf.order.filter(function (x) { return x !== state.selNode; });
-  var upBody = '<div class="crumbs">' + (upIds.length ? upIds.map(nodeLink).join('<span class="arrow">→</span>') : '<span class="mut">keine (Signalursprung)</span>') + '</div>' +
+  var satz = '';
+  if (upIds.length) satz += 'Kommt von ' + upIds.slice().reverse().join(' → ') + ' → ' + state.selNode;
+  else satz += 'Hier entsteht das Signal (' + state.selNode + ') – davor gibt es nichts zu prüfen';
+  if (dnIds.length) satz += '; geht weiter nach ' + dnIds.join(' → ');
+  else satz += '; hier endet das Signal – weiter geht es nicht';
+  h += '<div class="hint"><strong>Signalweg in Worten:</strong> ' + esc(satz) + '</div>';
+  var upBody = '<div class="crumbs">' + (upIds.length ? upIds.map(nodeLink).join('<span class="arrow">→</span>') : '<span class="mut">Hier entsteht das Signal</span>') + '</div>' +
     kantenTabelle((adj.inp[state.selNode] || []).map(function (e) { return { e: e }; }), 'up');
-  var dnBody = '<div class="crumbs">' + (dnIds.length ? dnIds.map(nodeLink).join('<span class="arrow">→</span>') : '<span class="mut">keine (Senke)</span>') + '</div>' +
+  var dnBody = '<div class="crumbs">' + (dnIds.length ? dnIds.map(nodeLink).join('<span class="arrow">→</span>') : '<span class="mut">Hier endet das Signal</span>') + '</div>' +
     kantenTabelle((adj.out[state.selNode] || []).map(function (e) { return { e: e }; }), 'down');
-  h += pfadSektion('herkunft', 'HERKUNFT – ' + upIds.length + ' Stationen vorgeschaltet', upIds.length, upBody, true);
-  h += pfadSektion('verlauf', 'VERLAUF – ' + dnIds.length + ' Stationen nachgeschaltet', dnIds.length, dnBody, true);
-  if (a.zweige.length) h += pfadSektion('zweige', 'ZWEIGE – ' + a.zweige.length + ' Geschwisterknoten', a.zweige.length,
+  h += pfadSektion('herkunft', 'HERKUNFT – woher kommt das Signal (' + upIds.length + ' Stationen)', upIds.length, upBody, true);
+  h += pfadSektion('verlauf', 'VERLAUF – wohin geht es weiter (' + dnIds.length + ' Stationen)', dnIds.length, dnBody, true);
+  if (a.zweige.length) h += pfadSektion('zweige', 'ZWEIGE – Abzweige zum selben Ziel (' + a.zweige.length + ')', a.zweige.length,
     '<div class="crumbs">' + a.zweige.map(nodeLink).join('<span class="arrow">·</span>') + '</div>', false);
-  if (a.extern.length) h += pfadSektion('extern', 'EXTERN – ' + a.extern.length + ' Anschlüsse', a.extern.length,
+  if (a.extern.length) h += pfadSektion('extern', 'EXTERN – Anschlüsse nach außen (' + a.extern.length + ')', a.extern.length,
     '<div>' + a.extern.map(function (x) { return nodeLink(x.id) + ' ' + badge(x.typ, 'b-ext'); }).join(' ') + '</div>', false);
   return h + '</div></div>';
 }
@@ -435,9 +472,9 @@ function vssHtml() {
 function rechnerHtml() {
   var h = '<h2>FAKTOR-Rechner</h2>' +
     '<p class="mut">k = 960 ist eine Annahme – per GPS verifizieren!</p>' +
-    '<label>Reifenumfang (m), z. B. 195/50R15 ≈ 1,83</label><input id="circ" type="number" step="0.001" value="1.83">' +
-    '<label>Zähnezahl ABS-Ring (VA)</label><input id="teeth" type="number" step="1" value="45">' +
-    '<label>k-Zahl Tacho (Annahme)</label><input id="kval" type="number" step="1" value="960">' +
+    '<label for="circ">Reifenumfang (m), z. B. 195/50R15 ≈ 1,83</label><input id="circ" type="number" step="0.001" value="1.83">' +
+    '<label for="teeth">Zähnezahl ABS-Ring (VA)</label><input id="teeth" type="number" step="1" value="45">' +
+    '<label for="kval">k-Zahl Tacho (Annahme)</label><input id="kval" type="number" step="1" value="960">' +
     '<button class="calc" id="calcBtn">Berechnen</button><div class="result" id="calcOut">–</div>';
   h += '<h2>Drehzahl- und MFA-Prüfung</h2><table class="pins"><tr><th>Von</th><th>Nach</th><th>Sollwert</th></tr>' +
     '<tr><td>' + nodeLink('ECU:22') + '</td><td>→ ' + nodeLink('T28/10') + '</td><td>Drehzahlsignal via G1/12, U1/06</td></tr>' +
