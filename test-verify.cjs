@@ -2,7 +2,7 @@
 const fs = require('fs');
 const crypto = require('crypto');
 const assert = require('assert');
-const base = 'C:/Users/Admin/AppData/Local/hermes/tmp-vw-analyse/';
+const base = 'C:/Users/Admin/Documents/VW-Golf-MK2-VR6-AAA-ZE2-ABS-Custom-Wheelspeed/';
 const html = fs.readFileSync(base + 'index.html', 'utf8');
 let pass = 0;
 function ok(name, fn) { fn(); pass++; console.log('PASS:', name); }
@@ -135,6 +135,29 @@ ok('Inhalte: sg7/VSS/Si/Relais', () => {
   assert(scripts[0].includes('Motorelektronik (Steuerger'), 'Si-Liste fehlt');
   assert(scripts[0].includes('Lastabwurfrelais (X-Relais)'), 'Relais-Liste fehlt');
   assert(scripts[1].includes('FAKTOR') || scripts[1].includes('faktorRechner'), 'FAKTOR fehlt');
+});
+
+// 9) Assistent-Logik: Fahrzeug -> SG -> Ergebnis
+ok('Assistent fahrzeugZuSg/baueErgebnis', () => {
+  assert.deepStrictEqual(A.fahrzeugZuSg({ motor: 'm29', abs: 'mk02eds', getriebe: 'manuell', extras: [] }), [8, 10, 26, 27]);
+  assert.deepStrictEqual(A.fahrzeugZuSg({ motor: 'm27', abs: 'kein', getriebe: 'a01m', extras: ['klima', 'gra2'] }), [7, 14, 22, 25, 26, 27]);
+  const erg = A.baueErgebnis([8, 10, 26, 27]);
+  assert(erg.anzahlSg === 4, 'SG: ' + erg.anzahlSg);
+  assert(erg.pruefungen.length === 3, 'Pruefungen');
+  assert(erg.pruefungen.every(p => p.ok), JSON.stringify(erg.pruefungen));
+});
+
+// 10) Keine Quellennachweise in der UI-Schicht
+ok('UI ohne Quellen', () => {
+  assert(!scripts[1].includes('Quelle'), 'UI enthaelt Quellenverweis');
+  assert(!scripts[1].includes('class=\\"src\\"'), 'UI enthaelt src-Div');
+  assert(!scripts[1].includes('sg-daten') && !scripts[1].includes('graph-kanten'), 'UI nennt Datendateien');
+});
+
+// 11) Wizard-Schritte vorhanden
+ok('Wizard 1-2-3-4', () => {
+  for (const s of ['Fahrzeug', 'Steuergeräte', 'Verarbeiten', 'Fertiges Pinout']) assert(scripts[1].includes(s), s + ' fehlt');
+  assert(scripts[0].includes('FAHRZEUG_GRUPPEN'), 'FAHRZEUG_GRUPPEN fehlt');
 });
 
 console.log('\nALLE ' + pass + ' CHECKS BESTANDEN');

@@ -1,7 +1,7 @@
 // Baut index.html (neu, standalone) aus app-template.js + ui-template.js + Daten. Einmalig, danach loeschen.
 const fs = require('fs');
 const crypto = require('crypto');
-const base = 'C:/Users/Admin/AppData/Local/hermes/tmp-vw-analyse/';
+const base = 'C:/Users/Admin/Documents/VW-Golf-MK2-VR6-AAA-ZE2-ABS-Custom-Wheelspeed/';
 
 const sgRaw = fs.readFileSync(base + 'sg-daten.js', 'utf8');
 const sgJson = sgRaw.replace(/^const SG_DATEN\s*=\s*/, '').replace(/;\s*$/, '').trim();
@@ -59,6 +59,14 @@ const css = '*{box-sizing:border-box}body{margin:0;background:#0D0D0D;color:#E8E
 + 'table.pins{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}table.pins th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#555;text-align:left;padding:5px 7px;border-bottom:1px solid #2a2a2a}'
 + 'table.pins td{padding:5px 7px;border-bottom:1px solid #1a1a1a;font-family:ui-monospace,monospace;vertical-align:top}'
 + '.mono{font-family:ui-monospace,monospace;font-size:12px;background:#0f0f0f;border:1px solid #222;border-radius:4px;padding:8px 10px;margin-top:6px}'
++ '.kbd{font-family:ui-monospace,monospace;font-size:11px;background:#1c1c1c;border:1px solid #333;border-radius:3px;padding:1px 6px;color:#999}'
++ '.opts{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}'
++ '.opt{background:#161616;border:1px solid #2a2a2a;color:#ccc;font-size:12px;font-weight:600;padding:8px 14px;border-radius:3px;cursor:pointer}'
++ '.opt.active{background:#E8A020;color:#0D0D0D;border-color:#E8A020}'
++ '.chip{display:inline-block;background:#1a1a1a;border:1px solid #2c2c2c;color:#ddd;font-size:12px;padding:4px 10px;border-radius:12px;margin:2px 4px 2px 0}'
++ '.done-chk span.txt{color:#E8A020}'
++ '.result-head{border-color:#E8A020}'
++ '.tab-btn.disabled{opacity:.35;cursor:default}';
 + '.mut{color:#888}.small{font-size:12px}.warn{color:#f59e0b;font-size:12px}'
 + '.src{font-size:10px;color:#555;margin-top:3px}.hint{background:#141414;border:1px solid #2a2a2a;border-radius:4px;padding:8px 12px;font-size:12px;color:#999;margin-top:12px}'
 + '.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:14px 0;padding:12px;background:#0f0f0f;border:1px solid #222;border-radius:5px}'
@@ -71,7 +79,13 @@ const css = '*{box-sizing:border-box}body{margin:0;background:#0D0D0D;color:#E8E
 + '.chk.done span.txt{color:#555;text-decoration:line-through}.prog{height:8px;background:#1c1c1c;border-radius:4px;overflow:hidden;margin:8px 0}.prog>div{height:100%;background:#E8A020;width:0%}'
 + '.step{padding:8px 0;border-bottom:1px solid #1a1a1a;font-size:13px}'
 + 'pre#fwPre{background:#0a0a0a;border:1px solid #222;border-radius:5px;padding:12px;font-size:11px;line-height:1.45;overflow:auto;max-height:480px;white-space:pre}'
-+ '.kbd{font-family:ui-monospace,monospace;font-size:11px;background:#1c1c1c;border:1px solid #333;border-radius:3px;padding:1px 6px;color:#999}'
++ '.tab-btn.disabled{opacity:.35;cursor:default}'
++ '.opts{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}'
++ '.opt{background:#161616;border:1px solid #2a2a2a;color:#ccc;font-size:12px;font-weight:600;padding:8px 14px;border-radius:3px;cursor:pointer}'
++ '.opt.active{background:#E8A020;color:#0D0D0D;border-color:#E8A020}'
++ '.chip{display:inline-block;background:#1a1a1a;border:1px solid #2c2c2c;color:#ddd;font-size:12px;padding:4px 10px;border-radius:12px;margin:2px 4px 2px 0}'
++ '.done-chk span.txt{color:#E8A020}'
++ '.result-head{border-color:#E8A020}'
 + '.empty{color:#555;padding:20px;text-align:center}footer{margin-top:24px;color:#555;font-size:12px}';
 
 const html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
@@ -82,7 +96,7 @@ const html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\
 '<nav class="tabs" id="tabs" role="tablist"></nav>\n' +
 '<div class="searchrow"><span class="icon">/</span><input id="q" type="search" placeholder="Globale Suche: System, Pin, Stecker, Farbe …  ( / = Fokus, Esc = zurück )"></div>\n' +
 '<div id="main"></div>\n' +
-'<footer><span id="stat"></span> · Stand 12.09.2026 · Quellen: sg-daten.js (DB + Research), graph-kanten.js, index-v3-archiv.html · Alle Angaben ohne Gewähr – vor Verdrahtung gegenmessen. Tasten: <span class="kbd">1–7</span> Tabs · <span class="kbd">/</span> Suche · <span class="kbd">Esc</span> zurück.</footer>\n' +
+'<footer><span id="stat"></span> · Alle Angaben ohne Gewähr – vor Verdrahtung gegenmessen. Tasten: <span class="kbd">1–4</span> Schritte · <span class="kbd">/</span> Suche · <span class="kbd">Esc</span> zurück.</footer>\n' +
 '</div>\n<script>\n' + app + '\n</script>\n<script>\n' + ui + '\n</script>\n</body>\n</html>\n';
 
 fs.writeFileSync(base + 'index.html', html);

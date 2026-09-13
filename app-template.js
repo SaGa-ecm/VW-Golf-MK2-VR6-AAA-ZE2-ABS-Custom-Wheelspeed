@@ -141,6 +141,87 @@ function sgStatistik() {
   return { sg: SG_DATEN.sg.length, pins: SG_DATEN.pinouts.length, proSg: per, knoten: GRAPH.nodes.length, kanten: GRAPH.edges.length };
 }
 
+/* ---------- Fahrzeug-Assistent (DOM-frei, testbar) ---------- */
+var FAHRZEUG_KEY = 'vw-fz-v1';
+var FAHRZEUG_GRUPPEN = [
+  { id: 'motor', titel: 'Motor / Motorelektronik', typ: 'single', optionen: [
+    { id: 'm29', label: 'VR6 AAA/ABV – Motronic M2.9 (Empfehlung)', sg: [8] },
+    { id: 'm27', label: 'VR6 AAA – Motronic M2.7 (Verteiler)', sg: [7] },
+    { id: 'digifant1', label: 'Digifant I (G60/G40)', sg: [1] },
+    { id: 'digifant2', label: 'Digifant II (PB/PF/RV/1P/2H)', sg: [2] },
+    { id: 'digifant3', label: 'Digifant 3.x (2E/ADY/AGG/ABF/ABA)', sg: [3] },
+    { id: 'monoj', label: 'Mono-Jetronic (RP früh, 1F)', sg: [4] },
+    { id: 'monom', label: 'Mono-Motronic (RP spät, AAM, ABS/ADZ/ANN/ANP/ACC)', sg: [5] },
+    { id: 'ke', label: 'KE-Motronic (9A)', sg: [6] }
+  ] },
+  { id: 'abs', titel: 'ABS', typ: 'single', optionen: [
+    { id: 'mk02eds', label: 'Teves Mk02 mit EDS (Empfehlung)', sg: [10] },
+    { id: 'mk02', label: 'Teves Mk02 ohne EDS', sg: [9] },
+    { id: 'mk04', label: 'Teves Mk04', sg: [11] },
+    { id: 'mk20', label: 'Teves Mk20', sg: [12] },
+    { id: 'kein', label: 'Kein ABS / Custom', sg: [] }
+  ] },
+  { id: 'getriebe', titel: 'Getriebe', typ: 'single', optionen: [
+    { id: 'manuell', label: 'Schaltgetriebe (Empfehlung)', sg: [] },
+    { id: 'a01m', label: 'Automatik 01M', sg: [14] },
+    { id: 'a096', label: 'Automatik 096', sg: [13] }
+  ] },
+  { id: 'extras', titel: 'Ausstattung (Mehrfachauswahl)', typ: 'multi', optionen: [
+    { id: 'klima', label: 'Climatronic', sg: [25] },
+    { id: 'gra2', label: 'Tempomat GRA Golf 2', sg: [22] },
+    { id: 'gra3', label: 'Tempomat GRA Golf 3', sg: [23] },
+    { id: 'gra4', label: 'Tempomat GRA Golf 4', sg: [24] },
+    { id: 'komfort3', label: 'Komfort/ZV Golf 3', sg: [20] },
+    { id: 'ksg4', label: 'Komfortsteuergerät Golf 4', sg: [21] },
+    { id: 'wfs1', label: 'Wegfahrsperre Gen 1', sg: [15] },
+    { id: 'wfs2', label: 'Wegfahrsperre Gen 2', sg: [16] },
+    { id: 'wfs3', label: 'Wegfahrsperre Gen 3', sg: [17] },
+    { id: 'airbag3', label: 'Airbag Golf 3', sg: [18] },
+    { id: 'airbag4', label: 'Airbag Golf 4', sg: [19] }
+  ] }
+];
+var FAHRZEUG_DEFAULT = { motor: 'm29', abs: 'mk02eds', getriebe: 'manuell', extras: [] };
+var FAHRZEUG_IMMER = [26, 27]; /* Tacho T28 + ZE2 */
+function fahrzeugZuSg(cfg) {
+  var out = FAHRZEUG_IMMER.slice(), seen = {};
+  out.forEach(function (id) { seen[id] = 1; });
+  FAHRZEUG_GRUPPEN.forEach(function (g) {
+    var v = cfg ? cfg[g.id] : undefined;
+    if (v === undefined) v = FAHRZEUG_DEFAULT[g.id];
+    var ids = [];
+    if (g.typ === 'single') {
+      g.optionen.forEach(function (o) { if (o.id === v) ids = o.sg; });
+    } else {
+      (v || []).forEach(function (vid) {
+        g.optionen.forEach(function (o) { if (o.id === vid) ids = ids.concat(o.sg); });
+      });
+    }
+    ids.forEach(function (id) { if (!seen[id]) { seen[id] = 1; out.push(id); } });
+  });
+  out.sort(function (a, b) { return a - b; });
+  return out;
+}
+/* Verarbeiten: Auswahl -> fertiges Ergebnis-Modell */
+function baueErgebnis(selIds) {
+  var selSet = {};
+  (selIds || []).forEach(function (id) { selSet[id] = 1; });
+  var sgs = SG_DATEN.sg.filter(function (s) { return selSet[s.id]; });
+  var pins = SG_DATEN.pinouts.filter(function (p) { return selSet[p.steuergeraet_id]; });
+  var pruef = [];
+  function hatKnoten(id) { return !!nodeById(GRAPH, id); }
+  var vssKette = ['G1/11', 'U1/11', 'T28/27', 'T28/07', 'U2/02', 'ECU:65'];
+  var fehlt = vssKette.filter(function (k) { return !hatKnoten(k); });
+  pruef.push({ id: 'vss', titel: 'VSS-Signalkette', ok: fehlt.length === 0,
+    text: fehlt.length ? 'Fehlt im Graph: ' + fehlt.join(', ') : 'G1/11 → U1/11 → T28/27 → T28/07 → U2/02 → ECU:65 vollständig' });
+  var dzm = ['ECU:22', 'G1/12', 'U1/06', 'T28/10'].filter(function (k) { return !hatKnoten(k); });
+  pruef.push({ id: 'dzm', titel: 'Drehzahlsignal', ok: dzm.length === 0,
+    text: dzm.length ? 'Fehlt im Graph: ' + dzm.join(', ') : 'ECU:22 → G1/12 → U1/06 → T28/10 vollständig' });
+  var mfa = ['ECU:51', 'T28/26'].filter(function (k) { return !hatKnoten(k); });
+  pruef.push({ id: 'mfa', titel: 'MFA-Verbrauchssignal', ok: mfa.length === 0,
+    text: mfa.length ? 'Fehlt im Graph: ' + mfa.join(', ') : 'ECU:51 → T28/26 vollständig' });
+  return { anzahlSg: sgs.length, anzahlPins: pins.length, sgs: sgs, pins: pins, pruefungen: pruef };
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { SG_DATEN: SG_DATEN, GRAPH: GRAPH, bfsUp: bfsUp, bfsDown: bfsDown, zweige: zweige, pfadAnalyse: pfadAnalyse, sgPinZuKnoten: sgPinZuKnoten, faktorRechner: faktorRechner, sgStatistik: sgStatistik, kantenWarnung: kantenWarnung, FIRMWARE_INO: FIRMWARE_INO };
+  module.exports = { SG_DATEN: SG_DATEN, GRAPH: GRAPH, bfsUp: bfsUp, bfsDown: bfsDown, zweige: zweige, pfadAnalyse: pfadAnalyse, sgPinZuKnoten: sgPinZuKnoten, faktorRechner: faktorRechner, sgStatistik: sgStatistik, kantenWarnung: kantenWarnung, FIRMWARE_INO: FIRMWARE_INO, FAHRZEUG_KEY: FAHRZEUG_KEY, FAHRZEUG_GRUPPEN: FAHRZEUG_GRUPPEN, FAHRZEUG_DEFAULT: FAHRZEUG_DEFAULT, FAHRZEUG_IMMER: FAHRZEUG_IMMER, fahrzeugZuSg: fahrzeugZuSg, baueErgebnis: baueErgebnis };
 }
