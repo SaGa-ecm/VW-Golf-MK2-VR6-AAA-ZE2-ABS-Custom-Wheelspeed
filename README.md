@@ -8,12 +8,14 @@ Interaktive Pinout-Referenz für Golf 2 GTI (19E) mit AAA-VR6-Umbau (Motronic 2.
 
 | Datei | Beschreibung |
 |---|---|
-| `index.html` | **Zentrale App (neu)** – Alles-Auswahl: Systeme→Steuergeräte→Pins, Stecker-Ansichten, Klick-Pfadverfolgung (HERKUNFT/VERLAUF/Zweige), Suche, VSS-Lösungen, FAKTOR-Rechner, Checkliste, Failsafe, Firmware v1.0 – live auf GitHub Pages |
+| `index.html` | **Zentrale App** – geführter Assistent: 1 Fahrzeug → 2 Steuergeräte → 3 Verarbeiten → 4 fertiges interaktives Pinout (Pinbelegung, klickbarer Signalpfad HERKUNFT/VERLAUF, VSS-Lösung, FAKTOR-Rechner, Checkliste, Failsafe, Firmware v1.0) – live auf GitHub Pages. Gebaut aus `app-template.js` + `ui-template.js` via `node build-index.cjs` |
 | `sg-daten.js` | Datensatz: 27 Steuergeräte, 755 Pins (DB + Research-Merge, mit Quellen + Konfidenz) |
 | `graph-kanten.js` | Verbindungsgraph: 467 Knoten, 135 Kanten (Herkunft/Verlauf/Zweige) |
 | `steuergeraete.html` | System-/Steuergeräte-Auswahlmenü (kompakte Zweitansicht) |
 | `signalpfad.html` | VSS-Signalpfad-Tracer (Checkliste, FAKTOR-Rechner) |
-| `test-verify.cjs` | Regressionstest (13 Checks, `node test-verify.cjs`) – Bau-Toolchain: `build-index.cjs`, `build-sg-v2.cjs`, `app-template.js`, `ui-template.js` |
+| `test-verify.cjs` | Regressionstest (16 Checks, `node test-verify.cjs`) – Bau-Toolchain: `build-index.cjs`, `build-sg-v2.cjs`, `app-template.js`, `ui-template.js` |
+| `app-template.js`, `ui-template.js` | App-Logik (Graph, Fahrzeug→SG-Mapping, Ergebnis-Modell) + UI-Schicht (Assistent) – werden in `index.html` eingebettet |
+| `si-extract.txt`, `relais-extract.txt`, `vss-opts.txt` | Build-Inputs (Si/Relais-Listen, VSS-Optionen) für `build-index.cjs` |
 | `docs/analyse-bericht.html` | Repo-Analyse, VSS-Kette, Maßnahmenplan |
 | `docs/abs-mk04-mk20-recherche.md` | Mk04/Mk20-Pinrecherche mit Quellen + Konfidenz |
 | `docs/pins-motor-sg.md`, `docs/pins-abs-getriebe.md`, `docs/pins-komfort-wfs.md` | Research mit JSON-Arrays (Quelle für `sg-daten.js`) |

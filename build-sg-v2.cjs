@@ -1,6 +1,6 @@
 // Build sg-daten.js v2: Research-JSONs aus docs/*.md mergen. Einmalig, danach loeschen.
 const fs = require('fs');
-const base = 'C:/Users/Admin/AppData/Local/hermes/tmp-vw-analyse/';
+const base = 'C:/Users/Admin/Documents/VW-Golf-MK2-VR6-AAA-ZE2-ABS-Custom-Wheelspeed/';
 const srcFiles = ['docs/pins-motor-sg.md', 'docs/pins-abs-getriebe.md', 'docs/pins-komfort-wfs.md'];
 
 const raw = fs.readFileSync(base + 'sg-daten.js', 'utf8');
