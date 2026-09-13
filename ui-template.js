@@ -15,7 +15,7 @@ function nodeLink(id) { return '<button class="nl" data-node="' + esc(id) + '">'
 var SCHRITTE = ['1 · Fahrzeug', '2 · Steuergeräte', '3 · Verarbeiten', '4 · Ergebnis'];
 var q = document.getElementById('q'), tabsEl = document.getElementById('tabs'), mainEl = document.getElementById('main');
 var STORE_KEY = 'vw-assistent-v1';
-var state = { step: 0, cfg: JSON.parse(JSON.stringify(FAHRZEUG_DEFAULT)), sel: [], selSg: null, selNode: null, checkState: {}, gebaut: false, sub: null, subKat: 'alle', subConn: 'alle', open: {} };
+var state = { step: 0, cfg: JSON.parse(JSON.stringify(FAHRZEUG_DEFAULT)), sel: [], selSg: null, selNode: null, checkState: {}, gebaut: false, sub: null, subKat: 'alle', subConn: 'alle', open: {}, absVar: null };
 try {
   var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
   if (saved && saved.cfg) { for (var k in saved) state[k] = saved[k]; }
@@ -173,10 +173,23 @@ function ergReiter() {
   };
   sgs.sort(function (a, b) { return rang(a) - rang(b) || (a.name < b.name ? -1 : 1); });
   sgs.forEach(function (s) {
+    if (s.kategorie === 'ABS') return; /* ABS-SGs kommen gebündelt in einen Reiter */
     var n = pinCount(s.id);
     tabs.push({ id: 'sg-' + s.id, label: sgKurz(s), count: n, sg: s });
     seen['sg-' + s.id] = 1;
   });
+  var absSgs = sgs.filter(function (s) { return s.kategorie === 'ABS'; });
+  if (absSgs.length) {
+    var absPins = 0;
+    absSgs.forEach(function (s) { absPins += pinCount(s.id); });
+    /* an der ABS-Position einsortieren (Rang 3) */
+    var pos = tabs.length;
+    for (var ti = 0; ti < tabs.length; ti++) {
+      var ts = tabs[ti].sg;
+      if (ts && (ts.kategorie === 'Getriebe' || (ts.kategorie !== 'Motor' && ts.id !== 26 && ts.id !== 27))) { pos = ti; break; }
+    }
+    tabs.splice(pos, 0, { id: 'abs', label: 'ABS System', count: absPins, absIds: absSgs.map(function (s) { return s.id; }) });
+  }
   if (state.sel.indexOf(27) >= 0) tabs.push({ id: 'sirel', label: 'Sicherungen & Relais', count: SI_LISTE.length + RELAIS_LISTE.length });
   tabs.push({ id: 'pfad', label: 'Signalpfad', count: GRAPH.nodes.length });
   tabs.push({ id: 'vss', label: 'VSS-Lösung', count: VSS_OPTS.length });
@@ -196,12 +209,29 @@ function nachbarn(id) {
 }
 function kantenTabelle(liste, richtung) {
   if (!liste.length) return '<div class="empty">–</div>';
-  var h = '<table class="pins"><tr><th>' + (richtung === 'up' ? 'Von' : 'Nach') + '</th><th>Signal</th></tr>';
+  var h = '<table class="pins"><tr><th>' + (richtung === 'up' ? 'Von' : 'Nach') + '</th><th>Signal</th><th></th></tr>';
   liste.forEach(function (x) {
     var other = richtung === 'up' ? x.e.von : x.e.nach;
-    h += '<tr><td>' + nodeLink(other) + '</td><td>' + esc(x.e.signal || '–') + '</td></tr>';
+    var copy = ((richtung === 'up' ? x.e.von : state.selNode) + ' → ' + (richtung === 'up' ? state.selNode : x.e.nach) + (x.e.signal ? ' (' + x.e.signal + ')' : '')).replace(/"/g, '&quot;');
+    h += '<tr class="copy-row"><td>' + nodeLink(other) + '</td><td>' + esc(x.e.signal || '–') +
+      '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
   });
   return h + '</table>';
+}
+var SCHLUESSEL = [
+  { id: 'T28/27', label: 'VSS-Eingang' }, { id: 'T28/07', label: 'VSS-Ausgang' },
+  { id: 'U2/02', label: 'VSS-Verteiler' }, { id: 'ECU:65', label: 'VSS an ECU' },
+  { id: 'ECU:22', label: 'Drehzahl' }, { id: 'T28/10', label: 'DZM' },
+  { id: 'ECU:51', label: 'MFA' }, { id: 'T28/26', label: 'MFA-Anzeige' }
+];
+function pfadSektion(key, titel, count, bodyHtml, defOffen) {
+  if (!state.open) state.open = {};
+  var o = state.open['pfad|' + key];
+  var offen = o === undefined ? !!defOffen : !!o;
+  var h = '<button class="conn-header" data-ptoggle="' + key + '">' +
+    '<span class="conn-badge" style="background:#27272a;color:#E8A020">' + count + '</span>' +
+    '<strong>' + esc(titel) + '</strong><span class="chev">' + (offen ? '▾' : '▸') + '</span></button>';
+  return h + (offen && bodyHtml ? bodyHtml : '');
 }
 /* SG-Reiter wie v3: Kategorie-Chips, "Alle aufklappen", Bereichs-Sidebar, Stecker-Akkordeons */
 function kabelZelle(k) {
@@ -307,41 +337,82 @@ function sgTabHtml(s) {
   h += '</div></div>';
   return h;
 }
+/* ABS-Reiter: Variantenumschalter (wie v3) + gewählte Variante im ZE2-Akkordeon-Stil */
+function absHtml(absIds) {
+  var sgs = absIds.map(sgById).filter(Boolean);
+  if (!sgs.length) return '<div class="empty">Kein ABS gewählt.</div>';
+  var cur = sgById(state.absVar);
+  if (!cur || absIds.indexOf(cur.id) < 0) { cur = sgs[0]; state.absVar = cur.id; }
+  var h = '<h2>ABS-Varianten</h2><div class="kats">';
+  sgs.forEach(function (s) {
+    h += '<button class="kat-btn' + (cur.id === s.id ? ' active' : '') + '" data-absvar="' + s.id + '">' + esc(sgKurz(s)) + ' <small>' + pinCount(s.id) + '</small></button>';
+  });
+  h += '</div>';
+  h += '<dl class="kv">';
+  if (cur.teilenummern) h += '<dt>Teilenummern</dt><dd>' + esc(cur.teilenummern) + '</dd>';
+  if (cur.bosch_nummern) h += '<dt>Bosch-Nrn.</dt><dd>' + esc(cur.bosch_nummern) + '</dd>';
+  if (cur.stecker) h += '<dt>Stecker</dt><dd>' + esc(cur.stecker) + '</dd>';
+  if (cur.fahrzeuge) h += '<dt>Fahrzeuge</dt><dd>' + esc(cur.fahrzeuge) + '</dd>';
+  if (cur.einbauort) h += '<dt>Einbauort</dt><dd>' + esc(cur.einbauort) + '</dd>';
+  if (cur.diagnose) h += '<dt>Diagnose</dt><dd>' + esc(cur.diagnose) + '</dd>';
+  if (cur.notizen) h += '<dt>Notizen</dt><dd>' + esc(cur.notizen) + '</dd>';
+  h += '</dl>';
+  return h + sgTabHtml(cur);
+}
+function ampBadge(a) {
+  var n = parseInt(a, 10) || 0;
+  var cls = n >= 30 ? 'fuse-30' : n >= 20 ? 'fuse-20' : n >= 15 ? 'fuse-15' : 'fuse-10';
+  return '<span class="fuse-amp ' + cls + '">' + esc(String(a)) + 'A</span>';
+}
 function sirelHtml() {
-  var h = '<h2>Sicherungen (ZE2, 22)</h2><table class="pins"><tr><th>Nr.</th><th>A</th><th>Funktion</th></tr>';
-  SI_LISTE.filter(function (s) { return matchQ(s.nr + ' ' + s.funktion); }).forEach(function (s) {
-    h += '<tr><td>Si. ' + esc(s.nr) + '</td><td>' + esc(s.amp) + '</td><td>' + esc(s.funktion) + '</td></tr>';
+  var si = SI_LISTE.filter(function (s) { return matchQ(s.nr + ' ' + s.funktion); });
+  var rel = RELAIS_LISTE.filter(function (r) { return matchQ(r.nr + ' ' + r.funktion); });
+  var h = '<div class="grid2"><div><h2>Sicherungen (' + si.length + ')</h2><table class="pins"><tr><th>Nr.</th><th>A</th><th>Funktion</th><th></th></tr>';
+  si.forEach(function (s) {
+    var copy = ('Si. ' + s.nr + ' | ' + s.amp + 'A | ' + s.funktion).replace(/"/g, '&quot;');
+    h += '<tr class="copy-row"><td>Si. ' + esc(s.nr) + '</td><td>' + ampBadge(s.amp) + '</td><td>' + esc(s.funktion) +
+      '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
   });
-  h += '</table><h2>Relaisplätze (24)</h2><table class="pins"><tr><th>Platz</th><th>Funktion</th></tr>';
-  RELAIS_LISTE.filter(function (r) { return matchQ(r.nr + ' ' + r.funktion); }).forEach(function (r) {
-    h += '<tr><td>' + esc(r.nr) + '</td><td>' + esc(r.funktion) + '</td></tr>';
+  h += '</table></div><div><h2>Relais (' + rel.length + ')</h2><table class="pins"><tr><th>Nr.</th><th>Funktion</th><th></th></tr>';
+  rel.forEach(function (r) {
+    var copy = ('Rel. ' + r.nr + ' | ' + r.funktion).replace(/"/g, '&quot;');
+    h += '<tr class="copy-row"><td>' + esc(r.nr) + '</td><td>' + esc(r.funktion) +
+      '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
   });
-  return h + '</table>';
+  return h + '</table></div></div>';
 }
 function pfadHtml() {
   var adj = buildAdj(GRAPH);
   var treffer = GRAPH.nodes.filter(function (n) { return matchQ(n.id + ' ' + n.label); }).slice(0, 60);
   var h = '<h2>Signalpfad – VSS verfolgen</h2>' +
-    '<p class="mut">HERKUNFT = alle vorgeschalteten Stationen · VERLAUF = alle nachgeschalteten · ZWEIGE = Geschwisterknoten.</p>' +
-    '<div class="crumbs">' + treffer.map(function (n) { return '<button class="crumb' + (state.selNode === n.id ? ' sel' : '') + '" data-node="' + esc(n.id) + '">' + esc(n.id) + '</button>'; }).join('<span class="arrow">·</span>') + '</div>';
-  if (!state.selNode) return h + '<div class="empty">Knoten wählen – z. B. T28/27 (VSS-Eingang), T28/07 (VSS-Ausgang) oder ECU:65.</div>';
+    '<p class="mut">HERKUNFT = alle vorgeschalteten Stationen · VERLAUF = alle nachgeschalteten · ZWEIGE = Geschwisterknoten.</p>';
+  h += '<div class="side-cols"><div class="sidebar"><div class="side-grp">Schlüsselknoten</div>';
+  SCHLUESSEL.forEach(function (k) {
+    h += '<button class="sidebar-btn' + (state.selNode === k.id ? ' active' : '') + '" data-node="' + esc(k.id) + '">' +
+      '<span class="kbadge" style="background:#27272a;color:#E8A020">' + esc(k.id) + '</span><span class="side-kurz">' + esc(k.label) + '</span></button>';
+  });
+  h += '</div><div class="side-main">';
+  h += '<div class="crumbs">' + treffer.map(function (n) { return '<button class="crumb' + (state.selNode === n.id ? ' sel' : '') + '" data-node="' + esc(n.id) + '">' + esc(n.id) + '</button>'; }).join('<span class="arrow">·</span>') + '</div>';
+  if (!state.selNode) return h + '<div class="empty">Knoten wählen – z. B. T28/27 (VSS-Eingang), T28/07 (VSS-Ausgang) oder ECU:65.</div></div></div>';
   var a = pfadAnalyse(GRAPH, state.selNode);
-  if (a.fehler) return h + '<div class="empty">' + esc(a.fehler) + '</div>';
+  if (a.fehler) return h + '<div class="empty">' + esc(a.fehler) + '</div></div></div>';
   var d = sgDetailZuKnoten(state.selNode);
   h += '<h3>' + esc(state.selNode) + ' <span class="mut">' + esc(a.knoten.label || '') + '</span></h3>';
   if (d) h += '<p>' + esc(d.funktion) + safetyMark(d) + '</p>';
   if (a.intern) h += '<div class="hint">' + badge('Tacho-intern', 'b-annahme') + ' ' + esc(a.intern) + '</div>';
   var upIds = a.herkunft.order.filter(function (x) { return x !== state.selNode; });
   var dnIds = a.verlauf.order.filter(function (x) { return x !== state.selNode; });
-  h += '<h3>HERKUNFT (' + upIds.length + ' Stationen)</h3>';
-  h += '<div class="crumbs">' + (upIds.length ? upIds.map(nodeLink).join('<span class="arrow">→</span>') : '<span class="mut">keine (Signalursprung)</span>') + '</div>';
-  h += kantenTabelle((adj.inp[state.selNode] || []).map(function (e) { return { e: e }; }), 'up');
-  h += '<h3>VERLAUF (' + dnIds.length + ' Stationen)</h3>';
-  h += '<div class="crumbs">' + (dnIds.length ? dnIds.map(nodeLink).join('<span class="arrow">→</span>') : '<span class="mut">keine (Senke)</span>') + '</div>';
-  h += kantenTabelle((adj.out[state.selNode] || []).map(function (e) { return { e: e }; }), 'down');
-  if (a.zweige.length) h += '<h3>ZWEIGE (' + a.zweige.length + ')</h3><div class="crumbs">' + a.zweige.map(nodeLink).join('<span class="arrow">·</span>') + '</div>';
-  if (a.extern.length) h += '<h3>Externe Anschlüsse</h3><div>' + a.extern.map(function (x) { return nodeLink(x.id) + ' ' + badge(x.typ, 'b-ext'); }).join(' ') + '</div>';
-  return h;
+  var upBody = '<div class="crumbs">' + (upIds.length ? upIds.map(nodeLink).join('<span class="arrow">→</span>') : '<span class="mut">keine (Signalursprung)</span>') + '</div>' +
+    kantenTabelle((adj.inp[state.selNode] || []).map(function (e) { return { e: e }; }), 'up');
+  var dnBody = '<div class="crumbs">' + (dnIds.length ? dnIds.map(nodeLink).join('<span class="arrow">→</span>') : '<span class="mut">keine (Senke)</span>') + '</div>' +
+    kantenTabelle((adj.out[state.selNode] || []).map(function (e) { return { e: e }; }), 'down');
+  h += pfadSektion('herkunft', 'HERKUNFT – ' + upIds.length + ' Stationen vorgeschaltet', upIds.length, upBody, true);
+  h += pfadSektion('verlauf', 'VERLAUF – ' + dnIds.length + ' Stationen nachgeschaltet', dnIds.length, dnBody, true);
+  if (a.zweige.length) h += pfadSektion('zweige', 'ZWEIGE – ' + a.zweige.length + ' Geschwisterknoten', a.zweige.length,
+    '<div class="crumbs">' + a.zweige.map(nodeLink).join('<span class="arrow">·</span>') + '</div>', false);
+  if (a.extern.length) h += pfadSektion('extern', 'EXTERN – ' + a.extern.length + ' Anschlüsse', a.extern.length,
+    '<div>' + a.extern.map(function (x) { return nodeLink(x.id) + ' ' + badge(x.typ, 'b-ext'); }).join(' ') + '</div>', false);
+  return h + '</div></div>';
 }
 function vssHtml() {
   var h = '<h2>VSS-Lösung</h2>';
@@ -419,6 +490,7 @@ function renderErgebnis() {
   var cur = tabs.filter(function (t) { return t.id === state.sub; })[0];
   if (!cur) h += '<div class="empty">Keine Steuergeräte gewählt.</div>';
   else if (cur.sg) h += sgTabHtml(cur.sg);
+  else if (state.sub === 'abs') h += absHtml(cur.absIds || []);
   else if (state.sub === 'sirel') h += sirelHtml();
   else if (state.sub === 'pfad') h += pfadHtml();
   else if (state.sub === 'vss') h += vssHtml();
@@ -432,10 +504,14 @@ function renderErgebnis() {
     b.onclick = function () { state.sub = b.dataset.sub; state.subKat = 'alle'; state.subConn = 'alle'; speichern(); render(); };
   });
   mainEl.querySelectorAll('[data-kat]').forEach(function (b) { b.onclick = function () { state.subKat = b.dataset.kat; speichern(); render(); }; });
+  mainEl.querySelectorAll('[data-absvar]').forEach(function (b) { b.onclick = function () { state.absVar = +b.dataset.absvar; speichern(); render(); }; });
   mainEl.querySelectorAll('[data-conn]').forEach(function (b) { b.onclick = function () { state.subConn = (state.subConn === b.dataset.conn) ? 'alle' : b.dataset.conn; speichern(); render(); }; });
   if (!state.open) state.open = {};
   mainEl.querySelectorAll('[data-toggle]').forEach(function (b) {
     b.onclick = function () { var key = (state.sub || '') + '|' + b.dataset.toggle; state.open[key] = !state.open[key]; speichern(); render(); };
+  });
+  mainEl.querySelectorAll('[data-ptoggle]').forEach(function (b) {
+    b.onclick = function () { var key = 'pfad|' + b.dataset.ptoggle; var o = state.open[key]; state.open[key] = (o === undefined) ? false : !o; speichern(); render(); };
   });
   mainEl.querySelectorAll('[data-allopen]').forEach(function (b) {
     b.onclick = function () {

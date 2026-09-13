@@ -14,13 +14,15 @@ fs.writeFileSync(base + 'verify-app.js', scripts[0]);
 fs.writeFileSync(base + 'verify-ui.js', scripts[1]);
 console.log('scripts extrahiert:', scripts[0].length, '/', scripts[1].length);
 
-// 2) HTML-Parser-Check: Tag-Balance (void-Elemente ausgenommen)
+// 2) HTML-Parser-Check: Tag-Balance des STATISCHEN Markups (Skript-/Style-Inhalte ignorieren,
+//    da JS-Strings dort oeffnende/schliessende Tags ueber mehrere Literale verteilen)
 ok('HTML-Balance', () => {
+  const statisch = html.replace(/<script>[\s\S]*?<\/script>/g, '<script></script>').replace(/<style>[\s\S]*?<\/style>/g, '<style></style>');
   const voids = new Set(['meta', 'br', 'hr', 'img', 'input', 'link', 'wbr']);
   const re = /<\/?([a-zA-Z][a-zA-Z0-9]*)(\s[^<>]*)?\/?>/g;
   const stack = [];
   let m;
-  while ((m = re.exec(html))) {
+  while ((m = re.exec(statisch))) {
     const full = m[0], tag = m[1].toLowerCase();
     if (full.startsWith('</')) {
       if (tag === 'script' || tag === 'style') continue;
@@ -83,6 +85,13 @@ ok('G47->SG-Pin5/23', () => {
   assert(e1.length === 1, 'G47->MK02:5 fehlt');
   const e2 = G.edges.filter(e => e.von === 'MK02:23' && e.nach === 'G47');
   assert(e2.length === 1, 'MK02:23->G47 fehlt');
+});
+ok('ABS-Pinmapping T55/x und T25/x', () => {
+  assert.strictEqual(A.sgPinZuKnoten(10, 'T55/1'), 'MK02:1');
+  assert.strictEqual(A.sgPinZuKnoten(10, 'T55/23'), 'MK02:23');
+  assert.strictEqual(A.sgPinZuKnoten(11, 'T55/1'), 'MK04:1');
+  assert.strictEqual(A.sgPinZuKnoten(12, 'T25/1'), 'MK20:1');
+  assert.strictEqual(A.sgPinZuKnoten(9, '5'), 'MK02:5');
 });
 ok('MK02:19 KONFLIKT-Kante', () => {
   const e = G.edges.filter(e => e.von === 'MK02:19' && e.nach === 'W/1');
@@ -164,6 +173,7 @@ ok('Wizard 1-2-3-4', () => {
 ok('Ergebnis v3-Ordnung', () => {
   for (const s of ['ZE2 Stecker', 'Tacho T28', 'Sicherungen & Relais', 'Signalpfad', 'Alle Stecker', 'Alle aufklappen', 'Verbunden mit', 'Hinweis', 'VSS-Lösung']) assert(scripts[1].includes(s), s + ' fehlt');
   for (const s of ['Scheinwerfer', 'Lenksäule', 'Scheinwerferkabelbaum links']) assert(scripts[0].includes(s), s + ' fehlt (App)');
+  for (const s of ['ABS System', 'ABS-Varianten', 'Schlüsselknoten', 'HERKUNFT', 'Sicherungen (', 'fuse-amp']) assert(scripts[1].includes(s), s + ' fehlt (UI)');
 });
 
 console.log('\nALLE ' + pass + ' CHECKS BESTANDEN');

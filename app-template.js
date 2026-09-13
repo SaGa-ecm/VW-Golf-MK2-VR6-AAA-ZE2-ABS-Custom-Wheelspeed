@@ -111,6 +111,13 @@ function pfadAnalyse(g, id) {
 }
 /* SG-Pin -> Graph-Knoten matchen (tolerant, Quelle bleibt sg-daten) */
 function pad2(s) { s = String(s); return s.length < 2 ? '0' + s : s; }
+/* ABS-Pinnummer: Zahl NACH dem '/' (T55/1 -> 1), sonst erste Ziffernfolge */
+function absPinNr(p) {
+  var m = String(p).match(/\/(\d+)/);
+  if (m) return m[1];
+  var d = String(p).match(/\d+/);
+  return d ? d[0] : '';
+}
 function sgPinZuKnoten(sgId, pin) {
   var p = String(pin), c = [];
   if (sgId === 26) c = ['T28/' + pad2(p)];
@@ -121,9 +128,9 @@ function sgPinZuKnoten(sgId, pin) {
   }
   else if (sgId === 8) c = ['ECU:' + p, 'ECU:' + pad2(p)];
   else if (sgId === 9) c = ['MK02:' + p];
-  else if (sgId === 10) { var n10 = (p.match(/\d+/) || [''])[0]; c = ['MK02:' + n10, 'MK04:' + n10]; }
-  else if (sgId === 11) { var n11 = (p.match(/\d+/) || [''])[0]; c = ['MK04:' + n11]; }
-  else if (sgId === 12) { var n12 = (p.match(/\d+/) || [''])[0]; c = ['MK20:' + n12]; }
+  else if (sgId === 10) c = ['MK02:' + absPinNr(p)];
+  else if (sgId === 11) c = ['MK04:' + absPinNr(p)];
+  else if (sgId === 12) c = ['MK20:' + absPinNr(p)];
   for (var i = 0; i < c.length; i++) if (nodeById(GRAPH, c[i])) return c[i];
   return '';
 }
