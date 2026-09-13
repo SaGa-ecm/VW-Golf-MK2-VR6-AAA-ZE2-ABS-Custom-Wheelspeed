@@ -15,7 +15,7 @@ function nodeLink(id) { return '<button class="nl" data-node="' + esc(id) + '">'
 var SCHRITTE = ['1 · Fahrzeug', '2 · Steuergeräte', '3 · Verarbeiten', '4 · Ergebnis'];
 var q = document.getElementById('q'), tabsEl = document.getElementById('tabs'), mainEl = document.getElementById('main');
 var STORE_KEY = 'vw-assistent-v1';
-var state = { step: 0, cfg: JSON.parse(JSON.stringify(FAHRZEUG_DEFAULT)), sel: [], selSg: null, selNode: null, checkState: {}, gebaut: false, sub: null, subKat: 'alle', subConn: 'alle' };
+var state = { step: 0, cfg: JSON.parse(JSON.stringify(FAHRZEUG_DEFAULT)), sel: [], selSg: null, selNode: null, checkState: {}, gebaut: false, sub: null, subKat: 'alle', subConn: 'alle', open: {} };
 try {
   var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
   if (saved && saved.cfg) { for (var k in saved) state[k] = saved[k]; }
@@ -151,6 +151,14 @@ function sgKurz(s) {
   return (s.kategorie + ' ' + s.name).slice(0, 22);
 }
 function connVonPin(pin) { var i = String(pin).indexOf('/'); return i > 0 ? String(pin).slice(0, i) : '–'; }
+/* Stecker-Name je Pin: bei Pins ohne '/' (T28, ECU) aus dem Steuergerät ableiten */
+function connFuerPin(s, pin) {
+  var c = connVonPin(pin);
+  if (c !== '–') return c;
+  if (s.id === 26) return 'T28';
+  if (s.kategorie === 'Motor') return 'ECU';
+  return '–';
+}
 /* Reiterliste aus Auswahl: SG-Reiter, dann Sonderreiter */
 function ergReiter() {
   var tabs = [], seen = {};
@@ -195,46 +203,105 @@ function kantenTabelle(liste, richtung) {
   });
   return h + '</table>';
 }
-/* SG-Reiter: Kategorie-Chips + Sidebar (Stecker) + Tabelle Pin/Funktion/Kabel/Verbunden */
+/* SG-Reiter wie v3: Kategorie-Chips, "Alle aufklappen", Bereichs-Sidebar, Stecker-Akkordeons */
+function kabelZelle(k) {
+  if (!k || k === '–' || /^unbelegt$/i.test(k)) return '<span class="mut">–</span>';
+  return String(k).split('/').map(function (teil) {
+    var st = farbeStyle(teil);
+    return '<span class="kbadge" style="background:' + st.bg + ';color:' + st.fg + '">' + esc(teil.trim()) + '</span>';
+  }).join('');
+}
+function connGruppen(s, conns) {
+  if (s.id !== 27) return [{ label: s.name, ids: conns }];
+  var drin = {}, out = [];
+  BEREICH_GROUPS.forEach(function (g) {
+    var ids = g.ids.filter(function (c) { return conns.indexOf(c) >= 0; });
+    ids.forEach(function (c) { drin[c] = 1; });
+    if (ids.length) out.push({ label: g.label, ids: ids });
+  });
+  var rest = conns.filter(function (c) { return !drin[c]; });
+  if (rest.length) out.push({ label: 'Weitere', ids: rest });
+  return out;
+}
+function pinZeile(s, p) {
+  var kn = sgPinZuKnoten(s.id, p.pin);
+  var nb = kn ? nachbarn(kn) : [];
+  var ziel = nb.length ? nb.slice(0, 5).map(nodeLink).join(' ') + (nb.length > 5 ? ' <span class="mut small">+' + (nb.length - 5) + '</span>' : '') : '–';
+  var hw = hinweisSauber(p.hinweis);
+  var warn = safetyMark(p) ? ' warn-bar' : '';
+  var dim = (!p.kabelfarbe || p.kabelfarbe === '–' || /^unbelegt$/i.test(p.kabelfarbe || '')) && !safetyMark(p) ? ' dim-row' : '';
+  var copy = (s.name + ' ' + p.pin + ': ' + p.funktion + (p.kabelfarbe && p.kabelfarbe !== '–' ? ' (' + p.kabelfarbe + ')' : '')).replace(/"/g, '&quot;');
+  return '<tr class="copy-row' + warn + dim + '"><td>' + (kn ? nodeLink(kn) : esc(p.pin)) + '</td><td>' + esc(p.funktion) + safetyMark(p) +
+    '</td><td>' + kabelZelle(p.kabelfarbe) + '</td><td>' + ziel + '</td><td class="mut small">' + esc(hw || '–') +
+    '</td><td><button class="copy-btn" data-copy="' + esc(copy) + '" title="Zeile kopieren">⧉</button></td></tr>';
+}
 function sgTabHtml(s) {
   var alle = SG_DATEN.pinouts.filter(function (p) { return p.steuergeraet_id === s.id; });
   var kats = [];
   alle.forEach(function (p) { if (p.kategorie && kats.indexOf(p.kategorie) < 0) kats.push(p.kategorie); });
   var conns = [];
-  alle.forEach(function (p) { var c = connVonPin(p.pin); if (conns.indexOf(c) < 0) conns.push(c); });
+  alle.forEach(function (p) { var c = connFuerPin(s, p.pin); if (conns.indexOf(c) < 0) conns.push(c); });
   conns.sort();
   var kat = state.subKat || 'alle', conn = state.subConn || 'alle';
+  if (!state.open) state.open = {};
   var h = '';
   if (kats.length) {
     h += '<div class="kats"><button class="kat-btn' + (kat === 'alle' ? ' active' : '') + '" data-kat="alle">Alle</button>';
     kats.forEach(function (k) { h += '<button class="kat-btn' + (kat === k ? ' active' : '') + '" data-kat="' + esc(k) + '">' + esc(k) + '</button>'; });
     h += '</div>';
   }
-  var gefiltert = alle.filter(function (p) {
-    if (kat !== 'alle' && p.kategorie !== kat) return false;
-    if (conn !== 'alle' && connVonPin(p.pin) !== conn) return false;
-    return matchQ(p.pin + ' ' + p.funktion + ' ' + (p.kabelfarbe || '') + ' ' + s.name);
-  });
-  h += '<div class="side-cols"><div class="sidebar">';
-  h += '<button class="sidebar-btn' + (conn === 'alle' ? ' active' : '') + '" data-conn="alle">Alle Stecker <small>' + alle.length + '</small></button>';
-  conns.forEach(function (c) {
-    var n = alle.filter(function (p) { return connVonPin(p.pin) === c; }).length;
-    h += '<button class="sidebar-btn' + (conn === c ? ' active' : '') + '" data-conn="' + esc(c) + '">' + esc(c) + ' <small>' + n + '</small></button>';
-  });
-  h += '</div><div class="side-main">';
-  h += '<h2>' + esc(s.name) + ' <span class="mut small">' + gefiltert.length + ' von ' + alle.length + ' Pins' + (s.stecker ? ' · ' + esc(s.stecker) : '') + '</span></h2>';
-  if (s.teilenummern) h += '<div class="mut small">' + esc(s.teilenummern) + '</div>';
-  if (!gefiltert.length) { h += '<div class="empty">Keine Treffer.</div>'; }
-  else {
-    h += '<table class="pins"><tr><th>Pin</th><th>Funktion</th><th>Kabel</th><th>Verbunden mit</th></tr>';
-    gefiltert.forEach(function (p) {
-      var kn = sgPinZuKnoten(s.id, p.pin);
-      var nb = kn ? nachbarn(kn) : [];
-      var ziel = nb.length ? nb.slice(0, 5).map(nodeLink).join(' ') + (nb.length > 5 ? ' <span class="mut small">+' + (nb.length - 5) + '</span>' : '') : '–';
-      h += '<tr><td>' + (kn ? nodeLink(kn) : esc(p.pin)) + '</td><td>' + esc(p.funktion) + safetyMark(p) + '</td><td>' + esc(p.kabelfarbe || '–') + '</td><td>' + ziel + '</td></tr>';
+  function connPins(c) {
+    return alle.filter(function (p) {
+      if (connFuerPin(s, p.pin) !== c) return false;
+      if (kat !== 'alle' && p.kategorie !== kat) return false;
+      return matchQ(p.pin + ' ' + p.funktion + ' ' + (p.kabelfarbe || '') + ' ' + (p.hinweis || '') + ' ' + s.name);
     });
-    h += '</table>';
   }
+  var sichtConns = conns.filter(function (c) { return conn === 'alle' || c === conn; });
+  var treffer = 0;
+  sichtConns.forEach(function (c) { treffer += connPins(c).length; });
+  var sucht = q.value.trim().length > 0;
+  h += '<div class="kats"><button class="kat-btn active">Alle Stecker <small>' + alle.length + '</small></button>' +
+    '<button class="kat-btn" data-allopen>Alle aufklappen</button>' +
+    '<button class="kat-btn" data-allshut>Alle zuklappen</button></div>';
+  h += '<div class="side-cols">';
+  if (conns.length > 1) {
+    h += '<div class="sidebar">';
+    connGruppen(s, conns).forEach(function (g) {
+      h += '<div class="side-grp">' + esc(g.label) + '</div>';
+      g.ids.forEach(function (c) {
+        var n = alle.filter(function (p) { return connFuerPin(s, p.pin) === c; }).length;
+        var mm = connMeta(c);
+        var sst = mm ? farbeStyle(mm.farbe) : { bg: '#27272a', fg: '#a1a1aa' };
+        h += '<button class="sidebar-btn' + (conn === c ? ' active' : '') + '" data-conn="' + esc(c) + '">' +
+          '<span class="kbadge" style="background:' + sst.bg + ';color:' + sst.fg + '">' + esc(c) + '</span> <small>' + n + '</small></button>';
+      });
+    });
+    h += '</div>';
+  }
+  h += '<div class="side-main">';
+  h += '<h2>' + esc(s.name) + ' <span class="mut small">' + treffer + ' von ' + alle.length + ' Pins' + (s.stecker ? ' · ' + esc(s.stecker) : '') + '</span></h2>';
+  if (s.teilenummern) h += '<div class="mut small">' + esc(s.teilenummern) + '</div>';
+  if (!sichtConns.length || !treffer) h += '<div class="empty">Keine Treffer.</div>';
+  sichtConns.forEach(function (c) {
+    var pins = connPins(c);
+    if (!pins.length) return;
+    var key = (state.sub || '') + '|' + c;
+    var offen = sucht || conn !== 'alle' || state.open[key];
+    var m = connMeta(c);
+    var st = m ? farbeStyle(m.farbe) : { bg: '#27272a', fg: '#a1a1aa' };
+    var name = m ? m.beschreibung : (c === '–' ? 'Sonstige Pins' : 'Stecker ' + c);
+    var det = m ? esc(m.farbe) + ' · ' + m.pole + '-polig' : '';
+    h += '<button class="conn-header" data-toggle="' + esc(c) + '">' +
+      '<span class="conn-badge" style="background:' + st.bg + ';color:' + st.fg + '">' + esc(c) + '</span>' +
+      '<strong>' + esc(name) + '</strong>' + (det ? '<span class="mut small">' + det + '</span>' : '') +
+      '<span class="conn-count">' + pins.length + 'P</span><span class="chev">' + (offen ? '▾' : '▸') + '</span></button>';
+    if (offen) {
+      h += '<table class="pins"><tr><th>Pin</th><th>Funktion</th><th>Kabel</th><th>Verbunden mit</th><th>Hinweis</th><th></th></tr>';
+      pins.forEach(function (p) { h += pinZeile(s, p); });
+      h += '</table>';
+    }
+  });
   h += '</div></div>';
   return h;
 }
@@ -364,6 +431,23 @@ function renderErgebnis() {
   });
   mainEl.querySelectorAll('[data-kat]').forEach(function (b) { b.onclick = function () { state.subKat = b.dataset.kat; speichern(); render(); }; });
   mainEl.querySelectorAll('[data-conn]').forEach(function (b) { b.onclick = function () { state.subConn = b.dataset.conn; speichern(); render(); }; });
+  if (!state.open) state.open = {};
+  mainEl.querySelectorAll('[data-toggle]').forEach(function (b) {
+    b.onclick = function () { var key = (state.sub || '') + '|' + b.dataset.toggle; state.open[key] = !state.open[key]; speichern(); render(); };
+  });
+  mainEl.querySelectorAll('[data-allopen]').forEach(function (b) {
+    b.onclick = function () {
+      var cur = ergReiter().filter(function (t) { return t.id === state.sub; })[0];
+      if (cur && cur.sg) SG_DATEN.pinouts.forEach(function (p) { if (p.steuergeraet_id === cur.sg.id) state.open[state.sub + '|' + connFuerPin(cur.sg, p.pin)] = true; });
+      speichern(); render();
+    };
+  });
+  mainEl.querySelectorAll('[data-allshut]').forEach(function (b) {
+    b.onclick = function () { state.open = {}; speichern(); render(); };
+  });
+  mainEl.querySelectorAll('[data-copy]').forEach(function (b) {
+    b.onclick = function (ev) { if (ev) ev.stopPropagation(); if (navigator.clipboard) navigator.clipboard.writeText(b.dataset.copy); };
+  });
   mainEl.querySelectorAll('[data-node]').forEach(function (b) {
     b.onclick = function () { state.selNode = b.dataset.node; state.sub = 'pfad'; speichern(); render(); };
   });

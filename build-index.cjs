@@ -72,6 +72,17 @@ const css = '*{box-sizing:border-box}body{margin:0;background:#0D0D0D;color:#E8E
 + '.sidebar-btn small{color:#555;margin-left:auto}'
 + '.sidebar-btn:hover{background:#181818;color:#bbb}'
 + '.sidebar-btn.active{background:rgba(232,160,32,.10);color:#E8A020}.sidebar-btn.active small{color:#E8A020}'
++ '.conn-header{display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;background:none;border:none;border-bottom:1px solid #1a1a1a;width:100%;text-align:left;color:#ddd;font-size:13px}'
++ '.conn-header:hover{background:#181818}'
++ '.conn-badge{display:inline-block;min-width:34px;text-align:center;font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;font-family:ui-monospace,monospace}'
++ '.conn-header strong{font-size:13px}'
++ '.conn-count{margin-left:auto;color:#555;font-family:ui-monospace,monospace;font-size:12px}'
++ '.chev{color:#555;font-size:12px;margin-left:8px}'
++ '.kbadge{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:3px;margin:1px 3px 1px 0;font-family:ui-monospace,monospace}'
++ '.copy-btn{background:none;border:none;color:#555;cursor:pointer;font-size:13px;opacity:.4;padding:2px 6px}'
++ 'tr.copy-row:hover{background:#161616}tr.copy-row:hover .copy-btn{opacity:1;color:#E8A020}'
++ 'tr.warn-bar{background:rgba(245,158,11,.05)}tr.dim-row{opacity:.5}'
++ '.side-grp{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#E8A020;margin:10px 0 2px;font-weight:700}'
 + '.side-main{flex:1;min-width:0}'
 + '.tab-btn.disabled{opacity:.35;cursor:default}'
 + '.mut{color:#888}.small{font-size:12px}.warn{color:#f59e0b;font-size:12px}'
@@ -98,8 +109,6 @@ const css = '*{box-sizing:border-box}body{margin:0;background:#0D0D0D;color:#E8E
 const html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
 '<title>VW Golf 2 GTI – Zentrale Pinout-Referenz (ZE2 / T28 / ECU / ABS / VSS)</title>\n<style>' + css + '</style>\n</head>\n<body>\n<div class="wrap">\n' +
 '<header><h1>VW Golf 2 GTI – Zentrale Pinout-Referenz</h1></header>\n' +
-'<div><span class="badge warn-unbest">UNBESTÄTIGT: Mk04/Mk20-Geberkompatibilität · Mk02-Pin19-VSS umstritten</span>\n' +
-'<span class="badge warn-annahme">ANNAHME: k = 960 (per GPS verifizieren)</span></div>\n' +
 '<nav class="tabs" id="tabs" role="tablist"></nav>\n' +
 '<div class="searchrow"><span class="icon">/</span><input id="q" type="search" placeholder="Globale Suche: System, Pin, Stecker, Farbe …  ( / = Fokus, Esc = zurück )"></div>\n' +
 '<div id="main"></div>\n' +
